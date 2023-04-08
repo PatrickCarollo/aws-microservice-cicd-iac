@@ -1,0 +1,442 @@
+#Complete simple CI/CD pipeline stack for Lambda
+AWSTemplateFormatVersion: 2010-09-09
+
+Parameters:
+    projectid:
+        Type: String
+    repositorynamepath:
+        Type: String
+    repositoryprovider:
+        Type: String
+        AllowedValues: 
+            - 'github'
+            - 'aws'
+    githubconnectionarn:
+        Type: String
+Conditions:
+    GHrep: !Equals
+        - !Ref repositoryprovider
+        - 'github'
+    AWSrep: !Equals
+        - !Ref repositoryprovider
+        - 'aws'
+Resources:
+###Begin CI/CD Pipeline services setup
+    Sourcechangeevent:
+        Type: AWS::Events::Rule
+        Condition: AWSrep
+        Properties:
+            RoleArn: !GetAtt Sourceeventrole.Arn 
+            Name: 'Repchangeevent'
+            State: ENABLED
+            Targets:
+                -   Id: 'pipelinestart'
+                    RoleArn: !GetAtt Sourceeventrole.Arn
+                    Arn: !Sub 
+                        - 'arn:aws:codepipeline:${AWS::Region}:${AWS::AccountId}:${Pipelinename}' 
+                        - Pipelinename: !Ref Lambdapipeline
+            EventPattern: 
+                source: 
+                    - 'aws.codecommit'
+                detail-type:
+                    - 'CodeCommit Repository State Change'
+                resources:
+                    - !GetAtt Codecommitrepository.Arn
+                detail:
+                    event: 
+                        - 'referenceCreated'
+                        - 'referenceUpdated'
+                    referenceType: 
+                        - 'branch'
+                    referenceName: 
+                        - 'master'
+    
+    Codecommitrepository:
+        Type: 'AWS::CodeCommit::Repository'
+        Condition: AWSrep
+        Properties:
+            RepositoryName: !Ref repositorynamepath
+            Code:
+                BranchName: master
+                S3:
+                    Bucket: !Sub 'deploymentresources-${projectid}'
+                    Key: 'cicd/StartingAppCode.zip'
+   
+    Buildstage:
+        Type: AWS::CodeBuild::Project
+        Properties:
+            Name: 'Deploymentbuild'
+            ServiceRole: !GetAtt Codebuildrole.Arn
+            Source: 
+                Type: CODEPIPELINE
+            Environment:
+                ComputeType: BUILD_GENERAL1_SMALL
+                Image: aws/codebuild/standard:5.0
+                Type: LINUX_CONTAINER
+            Artifacts: 
+                Type: CODEPIPELINE
+    
+    
+    Application:
+        Type: AWS::CodeDeploy::Application
+        Properties: 
+            ApplicationName: 'lambdaappDeploy'
+            ComputePlatform: Lambda
+    
+    Deploygroup:
+        Type: AWS::CodeDeploy::DeploymentGroup
+        Properties:
+            DeploymentGroupName: 'live'
+            ServiceRoleArn: !GetAtt Codedeployrole.Arn
+            ApplicationName: !Ref Application
+            AutoRollbackConfiguration:
+                Events: 
+                    - DEPLOYMENT_FAILURE
+                Enabled: true
+            DeploymentStyle:
+                DeploymentOption: WITH_TRAFFIC_CONTROL
+                DeploymentType: BLUE_GREEN
+            DeploymentConfigName: CodeDeployDefault.LambdaAllAtOnce
+    
+    #Lambda action for sending test request to validate dev version
+    Lambdaaction1:
+        Type: AWS::Lambda::Function
+        Properties:
+            FunctionName: 'TestReqAction'
+            Environment:
+                Variables: 
+                    AppName: !ImportValue 'microservicestack-AppName' 
+                    projectid: !Ref projectid
+            Handler: LambdaAction1.lambda_handler
+            Role: !GetAtt Lambdaction1role.Arn
+            Runtime: python3.7
+            Code:
+                S3Bucket: !Sub 'deploymentresources-${projectid}'
+                S3Key: 'cicd/LambdaAction1.zip'
+    #Deployment action for swapping versions on prod alias
+    Lambdaaction2:
+        Type: AWS::Lambda::Function
+        Properties:
+            FunctionName: 'LambdaDeployment'
+            Environment:
+                Variables: 
+                    AppName: !ImportValue 'microservicestack-AppName' 
+                    codedeploygroup: !Ref Deploygroup
+                    livealias: !ImportValue 'microservicestack-AliasName'
+                    codedeployapp: !Ref Application           
+            Handler: LambdaAction2.lambda_handler
+            Role: !GetAtt Lambdaction2role.Arn
+            Runtime: python3.7
+            Code:
+                S3Bucket: !Sub 'deploymentresources-${projectid}'
+                S3Key: 'cicd/LambdaAction2.zip'
+    #Assemble pipeline stages using CodePipeline service
+    Lambdapipeline:
+        Type: AWS::CodePipeline::Pipeline
+        Properties:
+            RoleArn: !GetAtt Codepipelinerole.Arn
+            Name: 'LambdaDeploymentPipe'
+            ArtifactStore:
+                    Type: S3
+                    Location: !Sub 'deploymentresources-${projectid}'
+            Stages: 
+                -   Name: 'GitSource'
+                    Actions: 
+                        !If 
+                            - AWSrep
+                            -   
+                                -   Name: 'SourceRivisionCodeCommit'
+                                    OutputArtifacts:
+                                        - Name: CodecommitOutput
+                                    RunOrder: 1
+                                    Configuration:
+                                        RepositoryName: !GetAtt Codecommitrepository.Name
+                                        BranchName: master 
+                                        PollForSourceChanges: false
+                                    ActionTypeId:
+                                        Category: Source
+                                        Owner: AWS 
+                                        Provider: CodeCommit
+                                        Version: 1 
+                            -   
+                                -   Name: 'SourceRivisionGitHub'
+                                    OutputArtifacts: 
+                                        - Name: GithubOutput
+                                    RunOrder: 1
+                                    Configuration:
+                                        DetectChanges: true
+                                        BranchName: main 
+                                        FullRepositoryId: !Ref repositorynamepath
+                                        ConnectionArn: !Ref githubconnectionarn
+                                    ActionTypeId:
+                                        Category: Source
+                                        Owner: AWS 
+                                        Provider: CodeStarSourceConnection
+                                        Version: 1
+                                        
+                                        
+                -   Name: 'LambdaBuild'
+                    Actions: 
+                        -   Name: 'ContainerBuildAction'
+                            InputArtifacts: 
+                                - Name: 
+                                    !If 
+                                        - AWSrep
+                                        - CodecommitOutput
+                                        - GithubOutput
+                            OutputArtifacts:
+                                - Name: BuildOutput
+                            RunOrder: 1
+                            Configuration:
+                                ProjectName: !Ref Buildstage
+                            ActionTypeId:
+                                Category: Build
+                                Owner: AWS
+                                Provider: CodeBuild
+                                Version: 1
+                -   Name: 'LambdaTest'
+                    Actions:        
+                        -   Name: 'DevInvoke'
+                            RunOrder: 1
+                            Configuration: 
+                                FunctionName: !Ref Lambdaaction1
+                            ActionTypeId:
+                                Category: Invoke
+                                Owner: AWS
+                                Provider: Lambda
+                                Version: 1
+
+                -   Name: 'LambdaDeploy'
+                    Actions: 
+                        -   Name: 'LambdaDeploy'
+                            RunOrder: 1
+                            Configuration: 
+                                FunctionName: !Ref Lambdaaction2
+                            ActionTypeId:
+                                Category: Invoke
+                                Owner: AWS
+                                Provider: Lambda
+                                Version: 1
+    
+    Sourceeventrole:
+        Type: AWS::IAM::Role
+        Properties:
+            RoleName: 'sourceevent'
+            AssumeRolePolicyDocument:
+                Version: "2012-10-17"
+                Statement:
+                    -   Effect: Allow
+                        Principal:
+                            Service: 
+                                - events.amazonaws.com
+                        Action: 
+                            - 'sts:AssumeRole'
+            Policies:
+                -   PolicyName: root                    
+                    PolicyDocument:
+                        Version: "2012-10-17"
+                        Statement: 
+                            -   Effect: Allow
+                                Action: 'codepipeline:StartPipelineExecution'
+                                Resource: !Sub 
+                                    - 'arn:aws:codepipeline:${AWS::Region}:${AWS::AccountId}:${Pipelinename}' 
+                                    - Pipelinename: !Ref Lambdapipeline 
+    
+    Codebuildrole:                  
+        Type: AWS::IAM::Role
+        Properties:
+            RoleName: 'buildpermissions'
+            AssumeRolePolicyDocument:
+                Version: "2012-10-17"
+                Statement:
+                    -   Effect: Allow
+                        Principal:
+                            Service: 
+                                - codebuild.amazonaws.com
+                        Action: 
+                            - 'sts:AssumeRole'
+            Policies:
+                -   PolicyName: root                    
+                    PolicyDocument:
+                        Version: "2012-10-17"
+                        Statement: 
+                            -   Effect: Allow
+                                Action: 'lambda:UpdateFunctionCode'
+                                Resource: !ImportValue 'microservicestack-AppArn' 
+                            -   Effect: Allow
+                                Action: 'logs:*'
+                                Resource: !Sub 'arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/codebuild/*'                                    
+                            -   Effect: Allow
+                                Action: 
+                                    - 's3:GetObject'
+                                    - 's3:PutObject'
+                                Resource: 
+                                    !If
+                                        - AWSrep
+                                        -   !Sub 'arn:aws:s3:::deploymentresources-${projectid}/LambdaDeploymentPipe/Codecommit/*'                                
+                                        -   !Sub 'arn:aws:s3:::deploymentresources-${projectid}/LambdaDeploymentPipe/GithubOutp/*'
+                            -   Effect: Allow
+                                Action: 'ssm:GetParameter'
+                                Resource: !Sub 'arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/LambdaMSprojectid'
+    
+    Codedeployrole:
+        Type: AWS::IAM::Role
+        Properties:
+            RoleName: 'deploypermissions'
+            AssumeRolePolicyDocument:
+                Version: "2012-10-17"
+                Statement:
+                    -   Effect: Allow
+                        Principal:
+                            Service: 
+                                - codedeploy.amazonaws.com
+                        Action: 
+                            - 'sts:AssumeRole'
+            ManagedPolicyArns: 
+                - arn:aws:iam::aws:policy/service-role/AWSCodeDeployRoleForLambda
+            Policies:
+                -   PolicyName: root                    
+                    PolicyDocument:
+                        Version: "2012-10-17"
+                        Statement: 
+                            -   Effect: Allow
+                                Action: 
+                                    -   'logs:CreateLogGroup'
+                                    -   'logs:CreateLogStream'
+                                    -   'logs:PutLogEvents'
+                                Resource: '*'
+    
+    Codepipelinerole:
+        Type: AWS::IAM::Role
+        Properties:
+            RoleName: 'pipelinepermissions'
+            AssumeRolePolicyDocument:
+                Version: "2012-10-17"
+                Statement:
+                    -   Effect: Allow
+                        Principal:
+                            Service: 
+                                - codepipeline.amazonaws.com
+                        Action: 
+                            - 'sts:AssumeRole'
+            ManagedPolicyArns: 
+                - arn:aws:iam::aws:policy/AWSCodePipeline_FullAccess
+            Policies:
+                -   PolicyName: root                    
+                    PolicyDocument:
+                        Version: "2012-10-17"
+                        Statement: 
+                            - !If 
+                                - AWSrep
+                                -   Effect: Allow
+                                    Action: 'codecommit:*'
+                                    Resource: !GetAtt Codecommitrepository.Arn
+                                -   Effect: Allow
+                                    Action: 
+                                        - 'codestar-connections:*'
+                                        - 'codestar:*' 
+                                    Resource: !Ref githubconnectionarn 
+                            -   Effect: Allow
+                                Action: 'lambda:InvokeFunction' 
+                                Resource: 
+                                    - !GetAtt Lambdaaction1.Arn
+                                    - !GetAtt Lambdaaction2.Arn
+                            -   Effect: Allow
+                                Action: 
+                                    - 's3:PutObject' 
+                                    - 's3:GetObject'
+                                Resource: !Sub 'arn:aws:s3:::deploymentresources-${projectid}/*'                            
+                            -   Effect: Allow
+                                Action: 'codebuild:*' 
+                                Resource: !GetAtt Buildstage.Arn
+                            -   Effect: Allow
+                                Action: 'lambda:*' 
+                                Resource: !ImportValue 'microservicestack-AppArn'                               
+                               
+    Lambdaction1role:
+        Type: AWS::IAM::Role
+        Properties:
+            RoleName: 'action1permissions'
+            AssumeRolePolicyDocument:
+                Version: "2012-10-17"
+                Statement:
+                    -   Effect: Allow
+                        Principal:
+                            Service: 
+                                - lambda.amazonaws.com
+                        Action: 
+                            - 'sts:AssumeRole'
+            Policies:
+                -   PolicyName: root                    
+                    PolicyDocument:
+                        Version: "2012-10-17"
+                        Statement: 
+                            -   Effect: Allow
+                                Action: 's3:GetObject'
+                                Resource: !Sub 'arn:aws:s3:::application-user-data-${projectid}/test/*'
+                            -   Effect: Allow
+                                Action: 'lambda:InvokeFunction'
+                                Resource: !ImportValue 'microservicestack-AppArn' 
+                            -   Effect: Allow
+                                Action:
+                                    - 'codepipeline:PutJobSuccessResult'
+                                    - 'codepipeline:PutJobFailureResult'
+                                Resource: '*'
+                            -   Effect: Allow
+                                Action: 
+                                    -   'logs:CreateLogGroup'
+                                    -   'logs:CreateLogStream'
+                                    -   'logs:PutLogEvents'
+                                Resource: '*'
+    
+    Lambdaction2role:
+        Type: AWS::IAM::Role
+        Properties:
+            RoleName: 'action2permissions'
+            AssumeRolePolicyDocument:
+                Version: "2012-10-17"
+                Statement:
+                    -   Effect: Allow
+                        Principal:
+                            Service: 
+                                - lambda.amazonaws.com
+                        Action: 
+                            - 'sts:AssumeRole'
+            Policies:
+                -   PolicyName: root                    
+                    PolicyDocument:
+                        Version: "2012-10-17"
+                        Statement:        
+                            
+                            -   Effect: Allow
+                                Action: 
+                                    - 'codedeploy:Batch*'
+                                    - 'codedeploy:CreateDeployment'
+                                    - 'codedeploy:Get*'
+                                    - 'codedeploy:List*'
+                                    - 'codedeploy:RegisterApplicationRevision'
+                                Resource: 
+                                    - !Sub 'arn:aws:codedeploy:${AWS::Region}:${AWS::AccountId}:deploymentgroup:${Application}/${Deploygroup}'
+                                    - !Sub 'arn:aws:codedeploy:${AWS::Region}:${AWS::AccountId}:deploymentconfig:CodeDeployDefault.LambdaAllAtOnce' 
+                                    - !Sub 'arn:aws:codedeploy:${AWS::Region}:${AWS::AccountId}:application:${Application}'
+                            -   Effect: Allow
+                                Action: 
+                                    -   'logs:CreateLogGroup'
+                                    -   'logs:CreateLogStream'
+                                    -   'logs:PutLogEvents'
+                                Resource: '*'
+                            -   Effect: Allow
+                                Action: 's3:GetObject'
+                                Resource: !Sub 'arn:aws:s3:::deploymentresources-${projectid}/*'
+                            -   Effect: Allow
+                                Action:
+                                    - 'codepipeline:PutJobSuccessResult'
+                                    - 'codepipeline:PutJobFailureResult'
+                                Resource: '*'
+                            -   Effect: Allow
+                                Action:
+                                    - 'lambda:GetFunction'
+                                    - 'lambda:ListVersionsByFunction'
+                                Resource: 
+                                    - !ImportValue 'microservicestack-AppArn'
+                                    - !ImportValue 'microservicestack-AliasArn'
