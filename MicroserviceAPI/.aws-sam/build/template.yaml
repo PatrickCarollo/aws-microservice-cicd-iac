@@ -17,7 +17,8 @@ Resources:
   Useritemtable:
     Type: AWS::DynamoDB::Table
     Properties:
-      TableName: UserTable
+      TableName:
+        Fn::Sub: UserTable-${projectid}
       ProvisionedThroughput:
         ReadCapacityUnits: '3'
         WriteCapacityUnits: '3'

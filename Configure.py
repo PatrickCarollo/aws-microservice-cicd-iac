@@ -195,7 +195,7 @@ def Get_RoleARN():
 def Put_Parameter(command_data):
     response = ssmclient.put_parameter(
         Overwrite = True,
-        Name = 'LambdaMSprojectid',
+        Name = 'LambdaMSprojectid'+ command_data['projectid'],
         Value = command_data['projectid'],
         Type  = 'String'
     )
