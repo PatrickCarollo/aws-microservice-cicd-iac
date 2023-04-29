@@ -17,7 +17,7 @@ phases:
     
     post_build: 
         commands:
-            - echo 'Updating development Lambda version'   
+            - echo 'Updating development Lambda version'   #change to unique id after LambdaMSprojectid
             - export projectid_value=$(aws ssm get-parameter --name LambdaMSprojectid --with-decryption --query Parameter.Value --output text)
             - aws lambda update-function-code --function-name MainLambdaMS$projectid_value --zip-file fileb://deployment_package.zip --publish
 

@@ -16,10 +16,11 @@ Resources:
                     -   ServerSideEncryptionByDefault:
                             SSEAlgorithm: aws:kms 
                             KMSMasterKeyID: alias/aws/s3
+    #for example app to add items to
     Useritemtable:
         Type: AWS::DynamoDB::Table
         Properties:
-            TableName: 'UserTable'
+            TableName: !Sub 'UserTable-${projectid}'
             ProvisionedThroughput: 
                 ReadCapacityUnits: '3'
                 WriteCapacityUnits: '3'

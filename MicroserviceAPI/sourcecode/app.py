@@ -69,7 +69,7 @@ def DB_Write(request_data, s3_key):
     response = dbclient.put_item(
         TableName = request_data['table_name'],
         Item = {
-            'name': { 'S': request_data['name']},
+            'name': {'S': request_data['name']},
             'id': {'S': request_data['id']},
             'user': {'S': request_data['user']},
             'itempath': {'S': s3_key}

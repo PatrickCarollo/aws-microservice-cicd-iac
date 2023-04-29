@@ -67,6 +67,7 @@ def Invoke_Dev_Version(json_test_request, projectid):
         msg = 'Failed at Invoke_Dev_Version function'
         Job_Fail(msg)
 
+
 #Send results back to pipeline
 def Job_Success(details):
     response = pipelineclient.put_job_success_result(

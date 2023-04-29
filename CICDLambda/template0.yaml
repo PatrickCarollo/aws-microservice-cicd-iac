@@ -27,7 +27,7 @@ Resources:
         Condition: AWSrep
         Properties:
             RoleArn: !GetAtt Sourceeventrole.Arn 
-            Name: 'Repchangeevent'
+            Name: !Sub 'Repchangeevent${projectid}'
             State: ENABLED
             Targets:
                 -   Id: 'pipelinestart'
@@ -65,7 +65,7 @@ Resources:
     Buildstage:
         Type: AWS::CodeBuild::Project
         Properties:
-            Name: 'Deploymentbuild'
+            Name: !Sub 'Deploymentbuild${projectid}'
             ServiceRole: !GetAtt Codebuildrole.Arn
             Source: 
                 Type: CODEPIPELINE
@@ -80,13 +80,13 @@ Resources:
     Application:
         Type: AWS::CodeDeploy::Application
         Properties: 
-            ApplicationName: 'lambdaappDeploy'
+            ApplicationName: !Sub 'lambdaappDeploy${projectid}'
             ComputePlatform: Lambda
     
     Deploygroup:
         Type: AWS::CodeDeploy::DeploymentGroup
         Properties:
-            DeploymentGroupName: 'live'
+            DeploymentGroupName: !Sub 'microservicedeployment${projectid}'
             ServiceRoleArn: !GetAtt Codedeployrole.Arn
             ApplicationName: !Ref Application
             AutoRollbackConfiguration:
@@ -102,10 +102,11 @@ Resources:
     Lambdaaction1:
         Type: AWS::Lambda::Function
         Properties:
-            FunctionName: 'TestReqAction'
+            FunctionName: !Sub 'TestReqAction${projectid}'
             Environment:
                 Variables: 
-                    AppName: !ImportValue 'microservicestack-AppName' 
+                    AppName: 
+                        Fn::ImportValue: !Sub 'microservicestack${projectid}-AppName' 
                     projectid: !Ref projectid
             Handler: LambdaAction1.lambda_handler
             Role: !GetAtt Lambdaction1role.Arn
@@ -117,12 +118,14 @@ Resources:
     Lambdaaction2:
         Type: AWS::Lambda::Function
         Properties:
-            FunctionName: 'LambdaDeployment'
+            FunctionName: !Sub 'LambdaDeployment${projectid}'
             Environment:
                 Variables: 
-                    AppName: !ImportValue 'microservicestack-AppName' 
+                    AppName: 
+                        Fn::ImportValue: !Sub 'microservicestack${projectid}-AppName' 
                     codedeploygroup: !Ref Deploygroup
-                    livealias: !ImportValue 'microservicestack-AliasName'
+                    livealias: 
+                        Fn::ImportValue: !Sub 'microservicestack${projectid}-AliasName'
                     codedeployapp: !Ref Application           
             Handler: LambdaAction2.lambda_handler
             Role: !GetAtt Lambdaction2role.Arn
@@ -135,7 +138,7 @@ Resources:
         Type: AWS::CodePipeline::Pipeline
         Properties:
             RoleArn: !GetAtt Codepipelinerole.Arn
-            Name: 'LambdaDeploymentPipe'
+            Name: !Sub 'LambdaDeploymentPipe${projectid}'
             ArtifactStore:
                     Type: S3
                     Location: !Sub 'deploymentresources-${projectid}'
@@ -221,7 +224,7 @@ Resources:
     Sourceeventrole:
         Type: AWS::IAM::Role
         Properties:
-            RoleName: 'sourceevent'
+            RoleName: !Sub 'sourceevent${projectid}'
             AssumeRolePolicyDocument:
                 Version: "2012-10-17"
                 Statement:
@@ -245,7 +248,7 @@ Resources:
     Codebuildrole:                  
         Type: AWS::IAM::Role
         Properties:
-            RoleName: 'buildpermissions'
+            RoleName: !Sub 'buildpermissions${projectid}'
             AssumeRolePolicyDocument:
                 Version: "2012-10-17"
                 Statement:
@@ -262,7 +265,8 @@ Resources:
                         Statement: 
                             -   Effect: Allow
                                 Action: 'lambda:UpdateFunctionCode'
-                                Resource: !ImportValue 'microservicestack-AppArn' 
+                                Resource: 
+                                    Fn::ImportValue: !Sub 'microservicestack${projectid}-AppArn' 
                             -   Effect: Allow
                                 Action: 'logs:*'
                                 Resource: !Sub 'arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/codebuild/*'                                    
@@ -282,7 +286,7 @@ Resources:
     Codedeployrole:
         Type: AWS::IAM::Role
         Properties:
-            RoleName: 'deploypermissions'
+            RoleName: !Sub 'deploypermissions${projectid}'
             AssumeRolePolicyDocument:
                 Version: "2012-10-17"
                 Statement:
@@ -309,7 +313,7 @@ Resources:
     Codepipelinerole:
         Type: AWS::IAM::Role
         Properties:
-            RoleName: 'pipelinepermissions'
+            RoleName: !Sub 'pipelinepermissions${projectid}'
             AssumeRolePolicyDocument:
                 Version: "2012-10-17"
                 Statement:
@@ -351,12 +355,13 @@ Resources:
                                 Resource: !GetAtt Buildstage.Arn
                             -   Effect: Allow
                                 Action: 'lambda:*' 
-                                Resource: !ImportValue 'microservicestack-AppArn'                               
+                                Resource: 
+                                    Fn::ImportValue: !Sub 'microservicestack${projectid}-AppArn'                               
                                
     Lambdaction1role:
         Type: AWS::IAM::Role
         Properties:
-            RoleName: 'action1permissions'
+            RoleName: !Sub 'action1permissions${projectid}'
             AssumeRolePolicyDocument:
                 Version: "2012-10-17"
                 Statement:
@@ -376,7 +381,8 @@ Resources:
                                 Resource: !Sub 'arn:aws:s3:::application-user-data-${projectid}/test/*'
                             -   Effect: Allow
                                 Action: 'lambda:InvokeFunction'
-                                Resource: !ImportValue 'microservicestack-AppArn' 
+                                Resource: 
+                                    Fn::ImportValue: !Sub 'microservicestack${projectid}-AppArn' 
                             -   Effect: Allow
                                 Action:
                                     - 'codepipeline:PutJobSuccessResult'
@@ -392,7 +398,7 @@ Resources:
     Lambdaction2role:
         Type: AWS::IAM::Role
         Properties:
-            RoleName: 'action2permissions'
+            RoleName: !Sub 'action2permissions${projectid}'
             AssumeRolePolicyDocument:
                 Version: "2012-10-17"
                 Statement:
@@ -438,5 +444,5 @@ Resources:
                                     - 'lambda:GetFunction'
                                     - 'lambda:ListVersionsByFunction'
                                 Resource: 
-                                    - !ImportValue 'microservicestack-AppArn'
-                                    - !ImportValue 'microservicestack-AliasArn'
+                                    - Fn::ImportValue: !Sub 'microservicestack${projectid}-AppArn'
+                                    - Fn::ImportValue: !Sub 'microservicestack${projectid}-AliasArn'
