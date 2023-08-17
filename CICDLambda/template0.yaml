@@ -1,6 +1,5 @@
 #Complete simple CI/CD pipeline stack for Lambda
 AWSTemplateFormatVersion: 2010-09-09
-
 Parameters:
     projectid:
         Type: String
@@ -13,6 +12,12 @@ Parameters:
             - 'aws'
     githubconnectionarn:
         Type: String
+    sourcebranch:
+        Type: String
+        AllowedValues: 
+            - 'prod'
+            - 'dev'        
+
 Conditions:
     GHrep: !Equals
         - !Ref repositoryprovider
@@ -20,14 +25,25 @@ Conditions:
     AWSrep: !Equals
         - !Ref repositoryprovider
         - 'aws'
+    Masterbranch: !Equals
+        - !Ref sourcebranch
+        - 'prod'
+    Secondarybranch: !Equals
+        - !Ref sourcebranch
+        - 'dev'
+    Awsmaster: !And
+        - Condition: Masterbranch
+        - Condition: AWSrep
+        
 Resources:
 ###Begin CI/CD Pipeline services setup
+    #Event for Codecommit source change with target as CiCD pipeline start.
     Sourcechangeevent:
-        Type: AWS::Events::Rule
         Condition: AWSrep
+        Type: AWS::Events::Rule
         Properties:
             RoleArn: !GetAtt Sourceeventrole.Arn 
-            Name: !Sub 'Repchangeevent${projectid}'
+            Name: !Sub 'Repchangeevent${sourcebranch}${projectid}'
             State: ENABLED
             Targets:
                 -   Id: 'pipelinestart'
@@ -49,40 +65,64 @@ Resources:
                     referenceType: 
                         - 'branch'
                     referenceName: 
-                        - 'master'
-    
+                        !If
+                            - Masterbranch
+                            - 'master'
+                            -   
+                                - anything-but: 
+                                    - 'master'
+    #Retains one source repository once condition Masterbranch is recieved as input
     Codecommitrepository:
+        Condition: Awsmaster
         Type: 'AWS::CodeCommit::Repository'
-        Condition: AWSrep
         Properties:
-            RepositoryName: !Ref repositorynamepath
+            RepositoryName: !Sub repositorynamepath
             Code:
                 BranchName: master
                 S3:
                     Bucket: !Sub 'deploymentresources-${projectid}'
                     Key: 'cicd/StartingAppCode.zip'
-   
+    #Stage for executing buildspec.yml commands on ingested artifacts- in this case build from Dockerfile and push to ECR
     Buildstage:
         Type: AWS::CodeBuild::Project
         Properties:
-            Name: !Sub 'Deploymentbuild${projectid}'
+            Name: !Sub 'Deploymentbuild${sourcebranch}${projectid}'
             ServiceRole: !GetAtt Codebuildrole.Arn
             Source: 
                 Type: CODEPIPELINE
             Environment:
+                EnvironmentVariables: 
+                        -   Name: 'Ecr'
+                            Type: PLAINTEXT
+                            Value: !Sub '${AWS::AccountId}.dkr.ecr.us-east-1.amazonaws.com'
+                        -   Name: 'EcrRepoName'
+                            Type: PLAINTEXT
+                            Value: !Select [1, !Split ["/", Fn::ImportValue: !Sub 'microservicestack${sourcebranch}${projectid}-EcrUri']]
+                        #Branch variable is currently unused in buildspec file
+                        -   Name: 'Branch'
+                            Type: PLAINTEXT
+                            Value: 
+                                !If
+                                    - Masterbranch
+                                    - 'prod'
+                                    - 'dev'
+                        -   Name: 'projectid'
+                            Type: PLAINTEXT
+                            Value: !Ref projectid           
                 ComputeType: BUILD_GENERAL1_SMALL
                 Image: aws/codebuild/standard:5.0
                 Type: LINUX_CONTAINER
+                PrivilegedMode: true
             Artifacts: 
                 Type: CODEPIPELINE
     
-    
+    #Configures application compute service type and namespace
     Application:
         Type: AWS::CodeDeploy::Application
         Properties: 
-            ApplicationName: !Sub 'lambdaappDeploy${projectid}'
+            ApplicationName: !Sub 'lambdaappdeploy${sourcebranch}${projectid}'
             ComputePlatform: Lambda
-    
+    #Configures how rivisions are deployed
     Deploygroup:
         Type: AWS::CodeDeploy::DeploymentGroup
         Properties:
@@ -98,86 +138,91 @@ Resources:
                 DeploymentType: BLUE_GREEN
             DeploymentConfigName: CodeDeployDefault.LambdaAllAtOnce
     
-    #Lambda action for sending test request to validate dev version
+    #Lambda action for sending test request to validate temp version
     Lambdaaction1:
         Type: AWS::Lambda::Function
         Properties:
-            FunctionName: !Sub 'TestReqAction${projectid}'
+            FunctionName: !Sub 'TestReqAction${sourcebranch}${projectid}'
             Environment:
                 Variables: 
                     AppName: 
-                        Fn::ImportValue: !Sub 'microservicestack${projectid}-AppName' 
+                        Fn::ImportValue: !Sub 'microservicestack${sourcebranch}${projectid}-AppName' 
                     projectid: !Ref projectid
             Handler: LambdaAction1.lambda_handler
             Role: !GetAtt Lambdaction1role.Arn
             Runtime: python3.7
             Code:
-                S3Bucket: !Sub 'deploymentresources-${projectid}'
+                S3Bucket: !Sub 'deploymentresources-${sourcebranch}${projectid}'
                 S3Key: 'cicd/LambdaAction1.zip'
-    #Deployment action for swapping versions on prod alias
+    #Deployment action for swapping versions on main alias
     Lambdaaction2:
         Type: AWS::Lambda::Function
         Properties:
-            FunctionName: !Sub 'LambdaDeployment${projectid}'
+            FunctionName: !Sub 'LambdaDeploymentAction${sourcebranch}${projectid}'
             Environment:
                 Variables: 
                     AppName: 
-                        Fn::ImportValue: !Sub 'microservicestack${projectid}-AppName' 
+                        Fn::ImportValue: !Sub 'microservicestack${sourcebranch}${projectid}-AppName' 
                     codedeploygroup: !Ref Deploygroup
                     livealias: 
-                        Fn::ImportValue: !Sub 'microservicestack${projectid}-AliasName'
+                        Fn::ImportValue: !Sub 'microservicestack${sourcebranch}${projectid}-AliasName'
                     codedeployapp: !Ref Application           
             Handler: LambdaAction2.lambda_handler
             Role: !GetAtt Lambdaction2role.Arn
             Runtime: python3.7
             Code:
-                S3Bucket: !Sub 'deploymentresources-${projectid}'
+                S3Bucket: !Sub 'deploymentresources-${sourcebranch}${projectid}'
                 S3Key: 'cicd/LambdaAction2.zip'
     #Assemble pipeline stages using CodePipeline service
     Lambdapipeline:
         Type: AWS::CodePipeline::Pipeline
         Properties:
             RoleArn: !GetAtt Codepipelinerole.Arn
-            Name: !Sub 'LambdaDeploymentPipe${projectid}'
+            Name: !Sub 'LambdaDeploymentPipe${sourcebranch}${projectid}'
             ArtifactStore:
                     Type: S3
-                    Location: !Sub 'deploymentresources-${projectid}'
+                    Location: !Sub 'deploymentresources-${sourcebranch}${projectid}'
             Stages: 
                 -   Name: 'GitSource'
                     Actions: 
                         !If 
                             - AWSrep
                             -   
-                                -   Name: 'SourceRivisionCodeCommit'
+                                -   Name: !Sub 'SourceRivisionCodeCommit${sourcebranch}'
                                     OutputArtifacts:
                                         - Name: CodecommitOutput
                                     RunOrder: 1
-                                    Configuration:
-                                        RepositoryName: !GetAtt Codecommitrepository.Name
-                                        BranchName: master 
-                                        PollForSourceChanges: false
                                     ActionTypeId:
                                         Category: Source
                                         Owner: AWS 
                                         Provider: CodeCommit
                                         Version: 1 
+                                    Configuration:
+                                        RepositoryName: !GetAtt Codecommitrepository.Name
+                                        BranchName: !If
+                                            - Masterbranch
+                                            - 'master'
+                                            - 'test' 
+                                        PollForSourceChanges: false
                             -   
                                 -   Name: 'SourceRivisionGitHub'
                                     OutputArtifacts: 
                                         - Name: GithubOutput
                                     RunOrder: 1
-                                    Configuration:
-                                        DetectChanges: true
-                                        BranchName: main 
-                                        FullRepositoryId: !Ref repositorynamepath
-                                        ConnectionArn: !Ref githubconnectionarn
                                     ActionTypeId:
                                         Category: Source
                                         Owner: AWS 
                                         Provider: CodeStarSourceConnection
                                         Version: 1
-                                        
-                                        
+                                    Configuration:
+                                        DetectChanges: true
+                                        BranchName: !If
+                                            - Masterbranch
+                                            - 'main'
+                                            - 'test'
+                                        FullRepositoryId: !Ref repositorynamepath
+                                        ConnectionArn: !Ref githubconnectionarn
+                      
                 -   Name: 'LambdaBuild'
                     Actions: 
                         -   Name: 'ContainerBuildAction'
@@ -208,7 +253,6 @@ Resources:
                                 Owner: AWS
                                 Provider: Lambda
                                 Version: 1
-
                 -   Name: 'LambdaDeploy'
                     Actions: 
                         -   Name: 'LambdaDeploy'
@@ -220,11 +264,12 @@ Resources:
                                 Owner: AWS
                                 Provider: Lambda
                                 Version: 1
-    
+    #Permissions for Eventbridge to start pipeline upon codecommit source change
     Sourceeventrole:
+        Condition: AWSrep
         Type: AWS::IAM::Role
         Properties:
-            RoleName: !Sub 'sourceevent${projectid}'
+            RoleName: !Sub 'sourceevent${sourcebranch}${projectid}'
             AssumeRolePolicyDocument:
                 Version: "2012-10-17"
                 Statement:
@@ -241,14 +286,12 @@ Resources:
                         Statement: 
                             -   Effect: Allow
                                 Action: 'codepipeline:StartPipelineExecution'
-                                Resource: !Sub 
-                                    - 'arn:aws:codepipeline:${AWS::Region}:${AWS::AccountId}:${Pipelinename}' 
-                                    - Pipelinename: !Ref Lambdapipeline 
-    
+                                Resource: !Sub 'arn:aws:codepipeline:${AWS::Region}:${AWS::AccountId}:LambdaDeploymentPipe${sourcebranch}${projectid}' 
+    #Permissions for codebuild container commands
     Codebuildrole:                  
         Type: AWS::IAM::Role
         Properties:
-            RoleName: !Sub 'buildpermissions${projectid}'
+            RoleName: !Sub 'buildpermissions${sourcebranch}${projectid}'
             AssumeRolePolicyDocument:
                 Version: "2012-10-17"
                 Statement:
@@ -262,31 +305,38 @@ Resources:
                 -   PolicyName: root                    
                     PolicyDocument:
                         Version: "2012-10-17"
-                        Statement: 
+                        Statement:
+                            -   Effect: Allow
+                                Action: 'logs:*'
+                                Resource: !Sub "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/codebuild/*"
+                            -   Effect: Allow
+                                Action: '*'
+                                Resource: 
+                                    !Sub 
+                                        - 'arn:aws:ecr:${AWS::Region}:${AWS::AccountId}:repository/${EcrName}'
+                                        - EcrName: !Select [1, !Split ["/", Fn::ImportValue: !Sub 'microservicestack${sourcebranch}${projectid}-EcrUri']]                           
                             -   Effect: Allow
                                 Action: 'lambda:UpdateFunctionCode'
                                 Resource: 
-                                    Fn::ImportValue: !Sub 'microservicestack${projectid}-AppArn' 
-                            -   Effect: Allow
-                                Action: 'logs:*'
-                                Resource: !Sub 'arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/codebuild/*'                                    
+                                    Fn::ImportValue: !Sub 'microservicestack${sourcebranch}${projectid}-AppArn' 
                             -   Effect: Allow
                                 Action: 
                                     - 's3:GetObject'
                                     - 's3:PutObject'
                                 Resource: 
                                     !If
-                                        - AWSrep
-                                        -   !Sub 'arn:aws:s3:::deploymentresources-${projectid}/LambdaDeploymentPipe/Codecommit/*'                                
-                                        -   !Sub 'arn:aws:s3:::deploymentresources-${projectid}/LambdaDeploymentPipe/GithubOutp/*'
+                                        -  AWSrep
+                                        - !Sub 'arn:aws:s3:::deploymentresources-${sourcebranch}${projectid}/LambdaDeploymentPipe/Codecommit/*'                                
+                                        - !Sub 'arn:aws:s3:::deploymentresources-${sourcebranch}${projectid}/LambdaDeploymentPipe/GithubOutp/*'
                             -   Effect: Allow
-                                Action: 'ssm:GetParameter'
-                                Resource: !Sub 'arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/LambdaMSprojectid'
-    
+                                Action: 'ecr:GetAuthorizationToken'
+                                Resource: '*'    
+     
+    #Permissions for Deploy onto lambda by the Deployment Group
     Codedeployrole:
         Type: AWS::IAM::Role
         Properties:
-            RoleName: !Sub 'deploypermissions${projectid}'
+            RoleName: !Sub 'deploypermissions${sourcebranch}${projectid}'
             AssumeRolePolicyDocument:
                 Version: "2012-10-17"
                 Statement:
@@ -309,11 +359,12 @@ Resources:
                                     -   'logs:CreateLogStream'
                                     -   'logs:PutLogEvents'
                                 Resource: '*'
-    
+
+    #Permissions for Pipeline service access to underlying stages' actions
     Codepipelinerole:
         Type: AWS::IAM::Role
         Properties:
-            RoleName: !Sub 'pipelinepermissions${projectid}'
+            RoleName: !Sub 'pipelinepermissions${sourcebranch}${projectid}'
             AssumeRolePolicyDocument:
                 Version: "2012-10-17"
                 Statement:
@@ -338,30 +389,30 @@ Resources:
                                 -   Effect: Allow
                                     Action: 
                                         - 'codestar-connections:*'
-                                        - 'codestar:*' 
+                                        - 'codestar:*'
                                     Resource: !Ref githubconnectionarn 
                             -   Effect: Allow
-                                Action: 'lambda:InvokeFunction' 
+                                Action: 'lambda:InvokeFunction'
                                 Resource: 
-                                    - !GetAtt Lambdaaction1.Arn
-                                    - !GetAtt Lambdaaction2.Arn
+                                        -   !GetAtt Lambdaaction2.Arn
+                                        -   !GetAtt Lambdaaction1.Arn
                             -   Effect: Allow
                                 Action: 
                                     - 's3:PutObject' 
                                     - 's3:GetObject'
-                                Resource: !Sub 'arn:aws:s3:::deploymentresources-${projectid}/*'                            
+                                Resource: !Sub 'arn:aws:s3:::deploymentresources-${sourcebranch}${projectid}/*'                            
                             -   Effect: Allow
                                 Action: 'codebuild:*' 
                                 Resource: !GetAtt Buildstage.Arn
                             -   Effect: Allow
                                 Action: 'lambda:*' 
                                 Resource: 
-                                    Fn::ImportValue: !Sub 'microservicestack${projectid}-AppArn'                               
-                               
+                                    Fn::ImportValue: !Sub 'microservicestack${sourcebranch}${projectid}-AppArn'                               
+    #Permissions for Lambda action sending test request through to temp lambda/newest version
     Lambdaction1role:
         Type: AWS::IAM::Role
         Properties:
-            RoleName: !Sub 'action1permissions${projectid}'
+            RoleName: !Sub 'action1permissions${sourcebranch}${projectid}'
             AssumeRolePolicyDocument:
                 Version: "2012-10-17"
                 Statement:
@@ -382,23 +433,23 @@ Resources:
                             -   Effect: Allow
                                 Action: 'lambda:InvokeFunction'
                                 Resource: 
-                                    Fn::ImportValue: !Sub 'microservicestack${projectid}-AppArn' 
-                            -   Effect: Allow
+                                    Fn::ImportValue: !Sub 'microservicestack${sourcebranch}${projectid}-AppArn' 
+                            -   Effect: Deny
                                 Action:
                                     - 'codepipeline:PutJobSuccessResult'
                                     - 'codepipeline:PutJobFailureResult'
-                                Resource: '*'
+                                Resource: !Sub 'arn:aws:codepipeline:${AWS::Region}:${AWS::AccountId}:LambdaDeploymentPipe${sourcebranch}${projectid}'
                             -   Effect: Allow
                                 Action: 
                                     -   'logs:CreateLogGroup'
                                     -   'logs:CreateLogStream'
                                     -   'logs:PutLogEvents'
                                 Resource: '*'
-    
+    #Permissions for Lambda action updating version
     Lambdaction2role:
         Type: AWS::IAM::Role
         Properties:
-            RoleName: !Sub 'action2permissions${projectid}'
+            RoleName: !Sub 'action2permissions${sourcebranch}${projectid}'
             AssumeRolePolicyDocument:
                 Version: "2012-10-17"
                 Statement:
@@ -413,7 +464,6 @@ Resources:
                     PolicyDocument:
                         Version: "2012-10-17"
                         Statement:        
-                            
                             -   Effect: Allow
                                 Action: 
                                     - 'codedeploy:Batch*'
@@ -438,11 +488,11 @@ Resources:
                                 Action:
                                     - 'codepipeline:PutJobSuccessResult'
                                     - 'codepipeline:PutJobFailureResult'
-                                Resource: '*'
+                                Resource: !Sub 'arn:aws:codepipeline:${AWS::Region}:${AWS::AccountId}:LambdaDeploymentPipe${sourcebranch}${projectid}'
                             -   Effect: Allow
                                 Action:
                                     - 'lambda:GetFunction'
                                     - 'lambda:ListVersionsByFunction'
                                 Resource: 
-                                    - Fn::ImportValue: !Sub 'microservicestack${projectid}-AppArn'
-                                    - Fn::ImportValue: !Sub 'microservicestack${projectid}-AliasArn'
+                                    - Fn::ImportValue: !Sub 'microservicestack${sourcebranch}${projectid}-AppArn'
+                                    - Fn::ImportValue: !Sub 'microservicestack${sourcebranch}${projectid}-AliasArn'

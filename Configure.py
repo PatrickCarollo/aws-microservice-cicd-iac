@@ -1,4 +1,4 @@
-#Script for deploying resources for deploying prerequisites for 'template0.yaml' as well as create_stack for ci/cd pipeline configuration.
+#Script for deploying prerequisites for 'template0.yaml' as well as running CF stack commands for ci/cd pipeline configuration.
 import io
 import random
 import boto3
@@ -17,38 +17,54 @@ def Command():
     projectid = input('enter unique numerical id created for project identification: ').strip()
     repository_provider = input('Codecommit repository or existing GitHub?.. aws/github: ').strip()
     repository_name_path = input('enter <githubaccount/repositoryname> if github or <nameforcodecommitrepository> if aws: ').strip()
+    source_branch = input('Choose branch to act as pipeline source.. test/prod: ')
     if repository_name_path == 'aws':
         github_connection_arn = 'null'
     else:
-        github_connection_arn = input('paste GitHub Connection ARN/ null: ')
+        github_connection_arn = input('paste GitHub Connection ARN here: ')
     command_data = {}
     command_data['action'] = action
     command_data['projectid'] = projectid
     command_data['repository_provider'] = repository_provider
     command_data['repository_name_path'] = repository_name_path
     command_data['github_connection_arn'] = github_connection_arn
+    command_data['source_branch'] = source_branch    
+    command_data['resources_bucket_name'] = 'deploymentresources-' + command_data['source_branch'] + command_data['projectid']
     return command_data
 
+#runs list with expected bucket name to check if bucket exists
+def Check_Bucket_Resource(command_data):
+    try:
+        response = s3client.list_objects(
+            Bucket = command_data['resources_bucket_name'],
+            )    
+        print(command_data['resources_bucket_name']+ ' already found')
+        return command_data['resources_bucket_name']
 
+    except: 
+        print('No resource bucket found, Creating new one..')
+        return False
+        
 #S3 bucket to store resources for CloudFormation to reference
 #such as lambda.zip, appspec.yaml and other deployment resources
 def Create_Bucket_Resource(command_data):   
     try:
         response = s3client.create_bucket(
-            Bucket = 'deploymentresources-' + command_data['projectid']
+            Bucket = command_data['resources_bucket_name']
         )
-        print('Resources bucket launched: '+ 'deploymentresources-' + command_data['projectid'] )
+        print('Resources bucket launched: '+ command_data['resources_bucket_name'] )
     except ClientError as e:
         print("Client error: %s" % e)
-  
+        
+        return command_data['resources_bucket_name']
 
-
-#Upload function code. Store appspec, buildspec
+#Upload stages' function code, initial buildspec
 def Upload_Resources(command_data):
+    #Only used for codecommit repo
     main_repository_code = [
-        'aws-cicd-microservice-iac/CICDLambda/buildspec.yaml',
-        'aws-cicd-microservice-iac/MicroserviceAPI/sourcecode/requirements.txt',
-        'aws-cicd-microservice-iac/MicroserviceAPI/sourcecode/app.py'
+        'DT_AWS/CICDLambda/buildspec.yaml',
+        'DT_AWS/MicroserviceAPI/sourcecode/aws_handler.py',
+        'DT_AWS/CICDLambda/Dockerfile'
     ]
     
     file0 = io.BytesIO()
@@ -62,12 +78,12 @@ def Upload_Resources(command_data):
     
     file1 = io.BytesIO()
     with ZipFile(file1,'w',ZIP_DEFLATED) as obj:
-        obj.write('aws-cicd-microservice-iac/CICDLambda/LambdaAction1.py', arcname = 'LambdaAction1.py')
+        obj.write('DT_AWS/CICDLambda/LambdaAction1.py', arcname = 'LambdaAction1.py')
     file1.seek(0)
     
     file2 = io.BytesIO()
     with ZipFile(file2,'w',ZIP_DEFLATED) as obj:
-        obj.write('aws-cicd-microservice-iac/CICDLambda/LambdaAction2.py', arcname = 'LambdaAction2.py')
+        obj.write('DT_AWS/CICDLambda/LambdaAction2.py', arcname = 'LambdaAction2.py')
     file2.seek(0)
     objects = [
         {
@@ -88,7 +104,7 @@ def Upload_Resources(command_data):
         try:
             response = s3client.put_object(
                 Body = x['body'],                        
-                Bucket = 'deploymentresources-' + command_data['projectid'],
+                Bucket = command_data['resources_bucket_name'],
                 Key = x['key']
             )
             if 'ETag' in response: 
@@ -101,13 +117,15 @@ def Upload_Resources(command_data):
     return data
 
 
-#Conditionally updates or creates the ci/cd 'template0' CF template
+#Conditionally updates or creates from ci/cd services 'template0' CF template
 def CreateUpdate_Stack(command_data, upload_status):
     if upload_status != 0:
-        with open('aws-cicd-microservice-iac/CICDLambda/template0.yaml') as temp:
+        
+        
+        with open('DT_AWS/CICDLambda/template0.yaml') as temp:
             template_body = temp.read()
-        name = 'CICDstack-' + command_data['projectid']
-        params = [
+        name = 'CICDstack-'+ command_data['source_branch']+ command_data['projectid']
+        params = [ 
             {
                 'ParameterKey': 'repositoryprovider',
                 'ParameterValue': command_data['repository_provider']
@@ -122,10 +140,14 @@ def CreateUpdate_Stack(command_data, upload_status):
             },
             {   
                 'ParameterKey': 'githubconnectionarn',
-                'ParameterValue':command_data['github_connection_arn'] 
+                'ParameterValue': command_data['github_connection_arn'] 
+            },
+            {   
+                'ParameterKey': 'sourcebranch',
+                'ParameterValue': command_data['source_branch'] 
             }
         ]
-    
+    #patrickcarollo/miscellaneous_aws_automations
     Validate_Template(template_body)
     stack_roles = Get_RoleARN()
     if command_data['action'] == 'update':
@@ -179,7 +201,7 @@ def Get_RoleARN():
     try:
         response = iamclient.get_role(
             RoleName = 'MainCICDStackServiceRole'
-        )
+        )                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      
         if 'Arn' in response['Role']:
             data = response['Role']['Arn'].strip()
             print(data)
@@ -190,37 +212,15 @@ def Get_RoleARN():
     except ClientError as e:
         print("Client error: %s" % e)
 
-
-#Stores Project iD for build and deploy services to reference
-def Put_Parameter(command_data):
-    response = ssmclient.put_parameter(
-        Overwrite = True,
-        Name = 'LambdaMSprojectid'+ command_data['projectid'],
-        Value = command_data['projectid'],
-        Type  = 'String'
-    )
-    if 'Version' in response:
-        print('project id updated in Parameter Store: ' + command_data['projectid'])
-    else:
-        print('Project id failed to upload to Parameter Store..')
-
-
-#Sample image upload for sample lambda app code to use. This can be removed if repurposing.
-def Sample_Image_Upload(command_data):
-    response = s3client.put_object(
-        Body = json.dumps('ImageDataSampleStandIn'),                        
-        Bucket = 'application-user-data-' + command_data['projectid'],
-        Key = 'test/testimage.png'
-    )
-
         
 def main():
     q = Command()
     if q['action'] == 'create':
-        Create_Bucket_Resource(q)
-    b = Upload_Resources(q)
-    CreateUpdate_Stack(q,b)
-    Put_Parameter(q)
-    Sample_Image_Upload(q)
+        a = Check_Bucket_Resource(q)
+        if a == False:
+            b = Create_Bucket_Resource(q)
+    c = Upload_Resources(q)
+    CreateUpdate_Stack(q,c)
+
 if __name__ == '__main__':
     main()

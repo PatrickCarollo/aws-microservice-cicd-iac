@@ -19,19 +19,21 @@ def lambda_handler(event, context):
     
 def Describe_Version(app_data):
     try:
+        #Used to return most recent version published
         response1 = lambdaclient.list_versions_by_function(
             FunctionName = app_data['AppName']
         )
+        #Used to return current version alias is mapped to
         response2 = lambdaclient.get_function(
             FunctionName = app_data['AppName'],
             Qualifier = app_data['livealias']
         )
-        dev_version = response1['Versions'][-1]
+        dev_version = response1['Versions'][-1]['Version']
         print(dev_version)
         print(response2)
         version_dict = {}
-        version_dict['dev'] = dev_version['Version']
-        version_dict['prod'] = response2['Configuration']['Version']
+        version_dict['temp'] = dev_version
+        version_dict['live'] = response2['Configuration']['Version']
         
         return version_dict
     except ClientError as e:
@@ -40,7 +42,7 @@ def Describe_Version(app_data):
         Job_Fail(msg)
         return False
         
-
+#Creates CodeDeploy deployment ontop of Group using buildspec json to update alias' version
 def Create_Deployment(app_data, app_version):
     try:
         revision_object = {
@@ -52,8 +54,8 @@ def Create_Deployment(app_data, app_version):
                             "Properties": {
                                 "Name": app_data['AppName'],
                                 "Alias": app_data['livealias'],
-                                "CurrentVersion": app_version['prod'],
-                                "TargetVersion": app_version['dev']
+                                "CurrentVersion": app_version['live'],
+                                "TargetVersion": app_version['temp']
                             }
                     }
                 }

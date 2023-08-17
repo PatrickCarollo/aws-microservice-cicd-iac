@@ -1,4 +1,4 @@
-#Lambda pipeline action for sending test request directly to dev version
+#Lambda pipeline action for sending test request directly to Temp version
 import boto3
 import json
 import os
@@ -14,38 +14,40 @@ def lambda_handler(event, context):
     job_id = event['CodePipeline.job']['id'].strip()
     global env_variables
     env_variables = os.environ
-    Construct_Request_Body(env_variables['projectid'])
-
-
+    a = Construct_Request_Body(env_variables['projectid'])
+    Invoke_Temp_Version(a, env_variables['projectid'])
+    return 'finished Temp invoke lambda function'
 def Construct_Request_Body(projectid): 
     try:
         response = s3client.get_object(
             Bucket = 'application-user-data-' + projectid,
             Key = 'test/testimage.png'
         )
-        print(response)
         if response['ResponseMetadata']['HTTPStatusCode'] == 200: 
             print('Getobject for test image successful')
         else:
             print('Getobject for sample/test image failed')
         req_parameters = {
-            'body': response['Body'].read().decode('utf-8'),
+            # TODO: Test this more thoroughly
+            'body': "test",
             'queryStringParameters': {
-                'name': 'Sample_Name/123456',
-                'id': '010101',
-                'user': 'test_userIdentity0'
+                'name': 'testname/123456',
+                'upc': 'test',
+                'user': 'test'
             }    
         }
         json_test_request = json.dumps(req_parameters)
-        print('request here: '+ json_test_request)
-        Invoke_Dev_Version(json_test_request, projectid)
+        print('request about to be sent through to lambda core service: '+ json_test_request)
+        return json_test_request
     except:
         msg = 'Failed at Construct_Request_Body function'
         Job_Fail(msg)
-
+        
+    
 
 #Test invocation
-def Invoke_Dev_Version(json_test_request, projectid):
+def Invoke_Temp_Version(json_test_request, projectid):
+    print('invoking...')
     try:
         response = lambdaclient.invoke(
             FunctionName = env_variables['AppName'],
@@ -53,21 +55,20 @@ def Invoke_Dev_Version(json_test_request, projectid):
             Payload = json_test_request,
         )
         response_data = json.loads(response['Payload'].read().decode('utf-8'))
-        if response['StatusCode'] == 200 and 'errorMessage' not in response:   
-            print(json.dumps(response_data))
-            msg = 'Successful response recieved from test invocation to dev stage app version: '
+        if response['StatusCode'] == 200 and 'errorMessage' not in response_data:  
+            print(response_data)
+            msg = 'Successful response recieved from test invocation to Temp version: '
             print(msg)
             Job_Success(msg)
         else:
             print(response_data)
-            msg = 'Failure response recieved from test invokation to development lamdba version'
+            msg = 'Failure response recieved from test invocation to Temp lamdba version'
             print(msg)
             Job_Fail(msg)
-    except:
-        msg = 'Failed at Invoke_Dev_Version function'
+    except ClientError as e:
+        print("Client error: %s" % e)
+        msg = 'Failed at Invoke_Temp_Version function'
         Job_Fail(msg)
-
-
 #Send results back to pipeline
 def Job_Success(details):
     response = pipelineclient.put_job_success_result(

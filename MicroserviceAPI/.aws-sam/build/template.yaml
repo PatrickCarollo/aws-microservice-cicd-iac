@@ -3,12 +3,19 @@ Transform: AWS::Serverless-2016-10-31
 Parameters:
   projectid:
     Type: String
+  initialimageuri:
+    Type: String
+  sourcebranch:
+    Type: String
+    AllowedValues:
+    - prod
+    - dev
 Resources:
   ApplicationBucket:
     Type: AWS::S3::Bucket
     Properties:
       BucketName:
-        Fn::Sub: application-user-data-${projectid}
+        Fn::Sub: application-user-data-${sourcebranch}${projectid}
       BucketEncryption:
         ServerSideEncryptionConfiguration:
         - ServerSideEncryptionByDefault:
@@ -18,14 +25,14 @@ Resources:
     Type: AWS::DynamoDB::Table
     Properties:
       TableName:
-        Fn::Sub: UserTable-${projectid}
+        Fn::Sub: UserTable${sourcebranch}${projectid}
       ProvisionedThroughput:
         ReadCapacityUnits: '3'
         WriteCapacityUnits: '3'
       AttributeDefinitions:
       - AttributeName: id
         AttributeType: S
-      - AttributeName: itempath
+      - AttributeName: MetadataPath
         AttributeType: S
       - AttributeName: name
         AttributeType: S
@@ -34,10 +41,10 @@ Resources:
       KeySchema:
       - AttributeName: id
         KeyType: HASH
-      - AttributeName: itempath
+      - AttributeName: MetadataPath
         KeyType: RANGE
       GlobalSecondaryIndexes:
-      - IndexName: nameindex
+      - IndexName: name-upc
         KeySchema:
         - AttributeName: name
           KeyType: HASH
@@ -46,7 +53,7 @@ Resources:
         Projection:
           NonKeyAttributes:
           - id
-          - itempath
+          - MetadataPath
           ProjectionType: INCLUDE
         ProvisionedThroughput:
           ReadCapacityUnits: '3'
@@ -55,8 +62,8 @@ Resources:
     Type: AWS::Serverless::Api
     Properties:
       Name:
-        Fn::Sub: MainApi${projectid}
-      StageName: dev
+        Fn::Sub: MainApi${sourcebranch}${projectid}
+      StageName: Live
       DefinitionBody:
         openapi: '3.0'
         info: {}
@@ -67,7 +74,7 @@ Resources:
                 httpMethod: POST
                 type: aws_proxy
                 uri:
-                  Fn::Sub: arn:${AWS::Partition}:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${Mainlambdafunction.Arn}:Prod/invocations
+                  Fn::Sub: arn:${AWS::Partition}:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${Mainlambdafunction.Arn}:Live/invocations
               contentHandling: CONVERT_TO_BINARY
               responses: {}
       EndpointConfiguration: REGIONAL
@@ -75,18 +82,18 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       FunctionName:
-        Fn::Sub: MainLambdaMS${projectid}
-      CodeUri: Mainlambdafunction
-      Handler: app.lambda_handler
+        Fn::Sub: MainLambdaMS${sourcebranch}${projectid}
+      PackageType: Image
+      ImageUri:
+        Ref: initialimageuri
       Environment:
         Variables:
           userbucket:
             Ref: ApplicationBucket
           usertable:
             Ref: Useritemtable
-      Runtime: python3.7
       Timeout: 12
-      AutoPublishAlias: Prod
+      AutoPublishAlias: Live
       Events:
         post:
           Type: Api
@@ -133,15 +140,13 @@ Resources:
                 - ApplicationBucket
                 - Arn
               - /*
-    Metadata:
-      SamResourceId: Mainlambdafunction
   FunctionLogGroup:
     Type: AWS::Logs::LogGroup
     Properties:
       LogGroupName:
         Fn::Sub: /aws/lambda/${Mainlambdafunction}
 Outputs:
-  AppLambdaArn:
+  AppArn:
     Value:
       Fn::GetAtt:
       - Mainlambdafunction
@@ -149,20 +154,30 @@ Outputs:
     Export:
       Name:
         Fn::Sub: ${AWS::StackName}-AppArn
-  AppLambda:
+  AppName:
     Value:
       Ref: Mainlambdafunction
     Export:
       Name:
         Fn::Sub: ${AWS::StackName}-AppName
-  AliasLambdaArn:
+  AliasArn:
     Value:
-      Fn::Sub: ${Mainlambdafunction.Arn}:Prod
+      Fn::Sub: ${Mainlambdafunction.Arn}:Live
     Export:
       Name:
         Fn::Sub: ${AWS::StackName}-AliasArn
-  AliasLambda:
-    Value: Prod
+  AliasName:
+    Value: Live
     Export:
       Name:
         Fn::Sub: ${AWS::StackName}-AliasName
+  EcrUri:
+    Value:
+      Fn::Select:
+      - 0
+      - Fn::Split:
+        - ':'
+        - Ref: initialimageuri
+    Export:
+      Name:
+        Fn::Sub: ${AWS::StackName}-EcrUri

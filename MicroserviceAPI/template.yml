@@ -4,23 +4,28 @@ Transform: AWS::Serverless-2016-10-31
 Parameters:
     projectid:
         Type: String
-
+    initialimageuri:
+        Type: String
+    sourcebranch:
+        Type: String
+        AllowedValues: 
+            - 'prod'
+            - 'dev'    
 Resources:
-###Begin microservice application setup
+###Begin microservice application infrastructure setup
     ApplicationBucket:
         Type: AWS::S3::Bucket
         Properties:
-            BucketName: !Sub 'application-user-data-${projectid}'
+            BucketName: !Sub 'application-user-data-${sourcebranch}${projectid}'
             BucketEncryption: 
                 ServerSideEncryptionConfiguration:
                     -   ServerSideEncryptionByDefault:
                             SSEAlgorithm: aws:kms 
                             KMSMasterKeyID: alias/aws/s3
-    #for example app to add items to
     Useritemtable:
         Type: AWS::DynamoDB::Table
         Properties:
-            TableName: !Sub 'UserTable-${projectid}'
+            TableName: !Sub 'UserTable${sourcebranch}${projectid}'
             ProvisionedThroughput: 
                 ReadCapacityUnits: '3'
                 WriteCapacityUnits: '3'
@@ -29,7 +34,7 @@ Resources:
                     AttributeName: 'id'
                     AttributeType: S
                 -   
-                    AttributeName: 'itempath'
+                    AttributeName: 'TransactionData'
                     AttributeType: S
                 -   
                     AttributeName: 'name'
@@ -42,11 +47,11 @@ Resources:
                     AttributeName: 'id'
                     KeyType: HASH
                 -   
-                    AttributeName: 'itempath'
+                    AttributeName: 'TransactionData'
                     KeyType: RANGE
             GlobalSecondaryIndexes: 
                 - 
-                    IndexName: 'nameindex'
+                    IndexName: 'name-upc'
                     KeySchema: 
                         - 
                             AttributeName: 'name'
@@ -57,17 +62,21 @@ Resources:
                     Projection: 
                         NonKeyAttributes: 
                             - 'id'
-                            - 'itempath'
+                            - 'TransactionData'
                         ProjectionType: 'INCLUDE'
                     ProvisionedThroughput: 
                         ReadCapacityUnits: '3'
                         WriteCapacityUnits: '3'
+
     #Lambda application
     Restapi:
         Type: AWS::Serverless::Api
         Properties:
-            Name: !Sub 'MainApi${projectid}'
-            StageName: 'dev'
+            Name: !Sub 'MainApi${sourcebranch}${projectid}'
+            StageName: 'Live'
+            #Auth:
+            #    ApiKeyRequired: true
+            #ApiKeySourceType: HEADER
             DefinitionBody:
                 openapi: '3.0'
                 info: {}
@@ -77,7 +86,7 @@ Resources:
                             x-amazon-apigateway-integration:
                                 httpMethod: POST
                                 type: aws_proxy
-                                uri: !Sub 'arn:${AWS::Partition}:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${Mainlambdafunction.Arn}:Prod/invocations'
+                                uri: !Sub 'arn:${AWS::Partition}:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${Mainlambdafunction.Arn}:Live/invocations'
                             contentHandling: CONVERT_TO_BINARY
                             responses: {}
             EndpointConfiguration: REGIONAL
@@ -85,16 +94,15 @@ Resources:
     Mainlambdafunction:
         Type: AWS::Serverless::Function
         Properties:
-            FunctionName: !Sub 'MainLambdaMS${projectid}' 
-            CodeUri: 'sourcecode/'
-            Handler: app.lambda_handler
+            FunctionName: !Sub 'MainLambdaMS${sourcebranch}${projectid}'
+            PackageType: Image
+            ImageUri: !Ref initialimageuri
             Environment:
                 Variables:
                     userbucket: !Ref ApplicationBucket
                     usertable: !Ref Useritemtable
-            Runtime: python3.7
             Timeout: 12
-            AutoPublishAlias: 'Prod'
+            AutoPublishAlias: 'Live'
             Events:
                 post:
                     Type: Api
@@ -121,7 +129,6 @@ Resources:
                                 -   'dynamodb:GetItem'
                                 -   'dynamodb:Query'
                             Resource: !GetAtt Useritemtable.Arn
-
                         -   Effect: Allow
                             Action: 
                                 -   'logs:CreateLogGroup'
@@ -139,24 +146,48 @@ Resources:
     FunctionLogGroup:
         Type: AWS::Logs::LogGroup
         Properties:
-            LogGroupName: !Sub '/aws/lambda/${Mainlambdafunction}'
-###End microservice application setup
+            LogGroupName: !Sub /aws/lambda/${Mainlambdafunction}
+    
+    #Initialapideploy:
+    #    Type: AWS::ApiGateway::Deployment
+    #    Properties: 
+    #        RestApiId: !Ref Restapi
+    #        StageName: 'Live'
+    #Apikey:
+    #    Type: AWS::ApiGateway::ApiKey
+    #    Properties: 
+    #        Enabled: true
+    #        Name: !Sub 'DTkey${projectid}'
+    #        StageKeys: 
+    #            -   RestApiId: !Ref Restapi
+    #                StageName: 'Live'
+##End microservice application infrastructure setup
 
-#outputs main app function ARN as well as alias ARN details
+
+
+#outputs
 Outputs:
-    AppLambdaArn:
+    AppArn:
         Value: !GetAtt Mainlambdafunction.Arn
         Export:
             Name: !Sub '${AWS::StackName}-AppArn'
-    AppLambda:
+    AppName:
         Value: !Ref Mainlambdafunction
         Export:
             Name: !Sub '${AWS::StackName}-AppName'
-    AliasLambdaArn:
-        Value: !Sub '${Mainlambdafunction.Arn}:Prod'
+    AliasArn:
+        Value: !Sub '${Mainlambdafunction.Arn}:Live'
         Export: 
             Name: !Sub '${AWS::StackName}-AliasArn'
-    AliasLambda:
-        Value: 'Prod'
+    AliasName:
+        Value: 'Live'
         Export: 
             Name: !Sub '${AWS::StackName}-AliasName'
+    EcrUri:
+        Value: !Select [0, !Split [":", !Ref initialimageuri]]
+        Export: 
+            Name: !Sub '${AWS::StackName}-EcrUri'    
+            
+    
+        
+    
