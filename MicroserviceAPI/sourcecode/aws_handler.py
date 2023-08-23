@@ -60,7 +60,7 @@ def Update_Table(request_data, metadata_key):
             'name': {'S': request_data['name']},
             'id': {'S': request_data['upc']},
             'user': {'S': request_data['user']},
-            'MetadataPath': {'S': metadata_key},
+            'TransactionData': {'S': metadata_key},
         }
     )
     print(response)

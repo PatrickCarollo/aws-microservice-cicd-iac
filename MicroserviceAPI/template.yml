@@ -9,7 +9,7 @@ Parameters:
     sourcebranch:
         Type: String
         AllowedValues: 
-            - 'prod'
+            - 'main'
             - 'dev'    
 Resources:
 ###Begin microservice application infrastructure setup

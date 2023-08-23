@@ -15,7 +15,7 @@ Parameters:
     sourcebranch:
         Type: String
         AllowedValues: 
-            - 'prod'
+            - 'main'
             - 'dev'        
 
 Conditions:
@@ -27,7 +27,7 @@ Conditions:
         - 'aws'
     Masterbranch: !Equals
         - !Ref sourcebranch
-        - 'prod'
+        - 'main'
     Secondarybranch: !Equals
         - !Ref sourcebranch
         - 'dev'
@@ -104,7 +104,7 @@ Resources:
                             Value: 
                                 !If
                                     - Masterbranch
-                                    - 'prod'
+                                    - 'main'
                                     - 'dev'
                         -   Name: 'projectid'
                             Type: PLAINTEXT
@@ -202,7 +202,7 @@ Resources:
                                         BranchName: !If
                                             - Masterbranch
                                             - 'master'
-                                            - 'test' 
+                                            - 'dev' 
                                         PollForSourceChanges: false
                             -   
                                 -   Name: 'SourceRivisionGitHub'
@@ -219,7 +219,7 @@ Resources:
                                         BranchName: !If
                                             - Masterbranch
                                             - 'main'
-                                            - 'test'
+                                            - 'dev'
                                         FullRepositoryId: !Ref repositorynamepath
                                         ConnectionArn: !Ref githubconnectionarn
                       

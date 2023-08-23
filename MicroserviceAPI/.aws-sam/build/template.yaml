@@ -32,7 +32,7 @@ Resources:
       AttributeDefinitions:
       - AttributeName: id
         AttributeType: S
-      - AttributeName: MetadataPath
+      - AttributeName: TransactionData
         AttributeType: S
       - AttributeName: name
         AttributeType: S
@@ -41,7 +41,7 @@ Resources:
       KeySchema:
       - AttributeName: id
         KeyType: HASH
-      - AttributeName: MetadataPath
+      - AttributeName: TransactionData
         KeyType: RANGE
       GlobalSecondaryIndexes:
       - IndexName: name-upc
@@ -53,7 +53,7 @@ Resources:
         Projection:
           NonKeyAttributes:
           - id
-          - MetadataPath
+          - TransactionData
           ProjectionType: INCLUDE
         ProvisionedThroughput:
           ReadCapacityUnits: '3'

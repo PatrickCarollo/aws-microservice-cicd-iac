@@ -14,10 +14,10 @@ ssmclient = boto3.client('ssm')
 
 def Command():
     action = input('create/update: ')
-    projectid = input('enter unique numerical id created for project identification: ').strip()
+    projectid = input('enter unique tag created for project identification: ').strip()
     repository_provider = input('Codecommit repository or existing GitHub?.. aws/github: ').strip()
     repository_name_path = input('enter <githubaccount/repositoryname> if github or <nameforcodecommitrepository> if aws: ').strip()
-    source_branch = input('Choose branch to act as pipeline source.. test/prod: ')
+    source_branch = input('Choose branch to act as pipeline source.. dev/main: ').strip()
     if repository_name_path == 'aws':
         github_connection_arn = 'null'
     else:
@@ -62,9 +62,9 @@ def Create_Bucket_Resource(command_data):
 def Upload_Resources(command_data):
     #Only used for codecommit repo
     main_repository_code = [
-        'DT_AWS/CICDLambda/buildspec.yaml',
-        'DT_AWS/MicroserviceAPI/sourcecode/aws_handler.py',
-        'DT_AWS/CICDLambda/Dockerfile'
+        'aws-microservice-cicd-iac/CICDLambda/buildspec.yaml',
+        'aws-microservice-cicd-iac/MicroserviceAPI/sourcecode/aws_handler.py',
+        'aws-microservice-cicd-iac/CICDLambda/Dockerfile'
     ]
     
     file0 = io.BytesIO()
@@ -78,12 +78,12 @@ def Upload_Resources(command_data):
     
     file1 = io.BytesIO()
     with ZipFile(file1,'w',ZIP_DEFLATED) as obj:
-        obj.write('DT_AWS/CICDLambda/LambdaAction1.py', arcname = 'LambdaAction1.py')
+        obj.write('aws-microservice-cicd-iac/CICDLambda/LambdaAction1.py', arcname = 'LambdaAction1.py')
     file1.seek(0)
     
     file2 = io.BytesIO()
     with ZipFile(file2,'w',ZIP_DEFLATED) as obj:
-        obj.write('DT_AWS/CICDLambda/LambdaAction2.py', arcname = 'LambdaAction2.py')
+        obj.write('aws-microservice-cicd-iac/CICDLambda/LambdaAction2.py', arcname = 'LambdaAction2.py')
     file2.seek(0)
     objects = [
         {
@@ -120,9 +120,7 @@ def Upload_Resources(command_data):
 #Conditionally updates or creates from ci/cd services 'template0' CF template
 def CreateUpdate_Stack(command_data, upload_status):
     if upload_status != 0:
-        
-        
-        with open('DT_AWS/CICDLambda/template0.yaml') as temp:
+        with open('aws-microservice-cicd-iac/CICDLambda/template0.yaml') as temp:
             template_body = temp.read()
         name = 'CICDstack-'+ command_data['source_branch']+ command_data['projectid']
         params = [ 
