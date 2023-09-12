@@ -1,5 +1,5 @@
 # Serverless Microservice + CI/CD Deployment
-Leveraging IAC tools on AWS for the setup of serverless microservice application that processes images 
+Leveraging IaC tools on AWS for the setup of serverless microservice application that processes images 
 and string parameters delivered via Rest API supported by CI/CD pipeline.
 
 
