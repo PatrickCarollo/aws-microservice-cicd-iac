@@ -6,40 +6,21 @@ s3client = boto3.client('s3')
 
 
 def lambda_handler(event, context):
-    #Accessing this Lambda's environment variables
+
+
     print(event)
-    env_variables = os.environ
-    bkt_name = env_variables['userbucket'].strip()
-    table_name = env_variables['usertable'].strip()
-    #Parsing request data
-    user = event['queryStringParameters']['user'].strip()
-    upc = event['queryStringParameters']['upc'].strip()
-    object_name = event['queryStringParameters']['name'].strip()
-    body_data = event['body']
-    request_data = {}
-    request_data['user'] = user
-    request_data['upc'] = upc
-    request_data['table_name'] = table_name
-    request_data['bkt_name'] = bkt_name
-    request_data['name'] = object_name
-    request_data['body_data'] = body_data
-    #Begin NFT creation flow:
-    x = (request_data)
-    if x != False:
-        a = Update_Table(request_data, x)    
+    p = Parse_Data(event)
+    if p != False:
+        x = Put_Object(p)
+        if x != False:
+            a = Update_Table(p, x)    
         
-        
-        
-        
-        
-        
-        response_data = { 
-            'Url to image': json.dumps(x), 
-            'id': request_data['upc'],
-            'DatabaseUpdated': json.dumps(a)
-        }
-    else:
-        response_data = 'Error.. put_object for image fail'
+            response_data = { 
+                'Url to image': x, 
+                'id': p['upc'],
+                'DatabaseUpdated': a
+            }
+    else: response_data = 'Failed to parse image'
     #main response 
     main_response_object = {
         'statusCode': 200,
@@ -50,6 +31,43 @@ def lambda_handler(event, context):
     }
     return main_response_object
     
+
+def Parse_Data(event):
+    #Accessing this Lambda's environment variables
+    try:
+        env_variables = os.environ
+        bkt_name = env_variables['userbucket'].strip()
+        table_name = env_variables['usertable'].strip()
+        #Parsing request data
+        user = event['queryStringParameters']['user'].strip()
+        upc = event['queryStringParameters']['upc'].strip()
+        object_name = event['queryStringParameters']['name'].strip()
+        body_data = event['body']
+        request_data = {}
+        request_data['user'] = user
+        request_data['upc'] = upc
+        request_data['table_name'] = table_name
+        request_data['bkt_name'] = bkt_name
+        request_data['name'] = object_name
+        request_data['body_data'] = body_data
+        return request_data
+    except:
+        
+        return False
+    
+def Put_Object(request_data):
+    key = 'Images/' + request_data['name']+ '.txt'
+    response = s3client.put_object(
+        Body = request_data['body_data'],
+        Bucket = request_data['bkt_name'],
+        Key = key
+    )
+    if response['ResponseMetadata']['HTTPStatusCode'] == 200:
+        
+        data = request_data['bkt_name'] + '/' + key
+    else:
+        data = False
+    return data
 
 
 def Update_Table(request_data, metadata_key):

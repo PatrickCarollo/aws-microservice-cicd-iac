@@ -6,12 +6,12 @@ and string parameters delivered via Rest API supported by CI/CD pipeline.
 ## Setup Instructions:
 _*set parameters `projectid` to a short string describing the function
 and `sourcebranch` to either `prov` or `dev`. They're used to
-isolate stack deployments as well as associate ci/cd services to their corresponding application services._
+isolate ci/cd pipelines as well as associate ci/cd services to their corresponding application services._
 
 1. Install or update SAM CLI 
 
 2. Create a private ECR in AWS console. __ECR naming format:__ `<nameofyourchoosing><sourcebranch><projectid>`
-    * Change ECR name in buildspec.yml 
+
 3. Sign into docker using aws auth, build desired initial docker image, push
     ```
     docker build -t <yourECRname> .
@@ -131,14 +131,14 @@ isolate stack deployments as well as associate ci/cd services to their correspon
 6. Run `Configure.py` script and enter input prompts- use the same `projectid` param as entered in SAM microservice stack to associated
 CI/CD services 
 
-7. Push a change to source repository branch and check AWS Codepipeline console to check pipeline exection
+7. Push a change to source repository branch and check AWS Codepipeline console to verify pipeline exection
 
-## Maintenance and Limitations 8/22/23:
+## Maintenance and Limitations 8/23:
 This infrastructure is intended to configure BASE infrastructure for prod and dev as of meaning only core functionality
 is included, and is meant to be built ontop of, For example; setting up security on prod stack. This infrastructure is also
 only architected for one monolithic service. Considerations when refactoring this infrastructure for separate feature; 
 1. S3 bucket and dynamodb database is currently being deployed in app stack. 
-    This Resource(s) might be elected for removal if creating a list service. 
+    This Resource(s) might be elected for removal if creating for example a list or get service. 
 2. lambdaAction1 code- how its test request is formed for image and specific parameters. 
 
 These would need reworking or remove as well as references to these resources in cicd stack.
@@ -167,7 +167,8 @@ Stack constists of:
 * Lambda Test action LambdaAction1.py for creating and sending sample request through the temp lambda version to validate revision
 * Lambda Action LambdaAction2.py as last stage in pipeline for creating CodeDeploy Deployment on Group usinga  revision object. 
     This works by updating the Alias Version # that the API is forwarding requests to.
-
+`sourcecode/aws_handler`: Core application code that parses request data and runs logic- This should be integrated
+into a Dockerfile if using lambda package type as Image and not code.zip 
 
 
 
