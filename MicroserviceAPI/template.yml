@@ -68,7 +68,7 @@ Resources:
                         ReadCapacityUnits: '3'
                         WriteCapacityUnits: '3'
 
-    #Lambda application
+    #Lambda application with API endpoint
     Restapi:
         Type: AWS::Serverless::Api
         Properties:
@@ -163,7 +163,7 @@ Resources:
 
 
 
-#outputs
+#Output variables for CI/CD stack to reference
 Outputs:
     AppArn:
         Value: !GetAtt Mainlambdafunction.Arn

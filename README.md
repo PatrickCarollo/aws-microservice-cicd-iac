@@ -8,22 +8,26 @@ _*set parameters `projectid` to a short string describing the function
 and `sourcebranch` to either `prov` or `dev`. They're used to
 isolate ci/cd pipelines as well as associate ci/cd services to their corresponding application services._
 
-1. Install or update SAM CLI 
+1. Install/update SAM CLI 
 
 2. Create a private ECR in AWS console. __ECR naming format:__ `<nameofyourchoosing><sourcebranch><projectid>`
 
 3. Sign into docker using aws auth, build desired initial docker image, push
+   *Skip docker build if you've refactored (see Maintenance and Limitations) and already have an Image you'd like to use
+    ```
+    cd aws-microservice-cicd-iac/MicroserviceAPI/src
+    ```
     ```
     docker build -t <yourECRname> .
     ```
     ```
-    aws ecr get-login-password --region <yourawsregion> | docker login --username AWS --password-stdin <yourawsaccid>.dkr.ecr.<yourawsregion>.amazonaws.com
+    aws ecr get-login-password --region <yourawsregion> | docker login --username AWS --password-stdin <yourawsaccountid>.dkr.ecr.<yourawsregion>.amazonaws.com
     ``` 
     ```
     docker tag <yourECRname>:latest <yourawsaccid>.dkr.ecr.<yourawsregion>.amazonaws.com/<yourECRname>:latest
     ```
     ```
-    docker push <yourawsaccid>.dkr.ecr.<yourawsregion>.amazonaws.com/<yourECRname:latest
+    docker push <yourawsacountid>.dkr.ecr.<yourawsregion>.amazonaws.com/<yourECRname:latest
     ```
     
 4. Deploy microservice stack
@@ -39,10 +43,8 @@ isolate ci/cd pipelines as well as associate ci/cd services to their correspondi
     * Fill in SAM prompts & template parameters.. __stack name format:__ `microservicestack<sourcebranch><projectid>`
     * Check AWS Cloudformation console to verify the launch status
 
-5. Create CI/CD stack service role
-    ```
-    cd aws-microservice-cicd-iac
-    ```
+5. Create CI/CD stack service role. Run following CLI cmds.
+
     ```
     aws iam create-role --role-name MainCICDStackServiceRole --assume-role-policy-document '{
         "Version": "2012-10-17",
@@ -128,17 +130,17 @@ isolate ci/cd pipelines as well as associate ci/cd services to their correspondi
     }'
     ```
 
-6. Run `Configure.py` script and enter input prompts- use the same `projectid` param as entered in SAM microservice stack to associated
+6. Run `Configure.py` script and enter input prompts- use the same `projectid` param as entered in SAM microservice stack to associate
 CI/CD services 
 
 7. Push a change to source repository branch and check AWS Codepipeline console to verify pipeline exection
 
-## Maintenance and Limitations 8/23:
+## Maintenance and Limitations 11/28/23:
 This infrastructure is intended to configure BASE infrastructure for prod and dev as of meaning only core functionality
-is included, and is meant to be built ontop of, For example; setting up security on prod stack. This infrastructure is also
-only architected for one monolithic service. Considerations when refactoring this infrastructure for separate feature; 
+is included, and is meant to be built ontop of, For example; setting up security on prod stack. This set of resources, as-is, is
+only architected for a single monolithic service. Considerations when refactoring for separate features; 
 1. S3 bucket and dynamodb database is currently being deployed in app stack. 
-    This Resource(s) might be elected for removal if creating for example a list or get service. 
+    This Resource(s) might be elected for removal if creating for example if deploying a list or get feature. 
 2. lambdaAction1 code- how its test request is formed for image and specific parameters. 
 
 These would need reworking or remove as well as references to these resources in cicd stack.

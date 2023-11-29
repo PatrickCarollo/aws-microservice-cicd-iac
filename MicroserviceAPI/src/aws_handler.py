@@ -14,14 +14,16 @@ def lambda_handler(event, context):
         x = Put_Object(p)
         if x != False:
             a = Update_Table(p, x)    
-        
-            response_data = { 
-                'Url to image': x, 
-                'id': p['upc'],
-                'DatabaseUpdated': a
-            }
-    else: response_data = 'Failed to parse image'
-    #main response 
+            if a != False:
+                response_data = { 
+                    's3 path to image': x, 
+                    'id': p['upc'],
+                    'DatabaseUpdated': a
+                }
+            else: response_data = 'Failed to update DB table'
+        else: response_data - 'Failed to upload image data'
+    else: response_data = 'Failed to parse request'
+    #Creating response format 
     main_response_object = {
         'statusCode': 200,
         'headers': {
@@ -52,9 +54,9 @@ def Parse_Data(event):
         request_data['body_data'] = body_data
         return request_data
     except:
-        
         return False
     
+
 def Put_Object(request_data):
     key = 'Images/' + request_data['name']+ '.txt'
     response = s3client.put_object(
@@ -93,7 +95,7 @@ def Update_Table(request_data, metadata_key):
 #event = {
 #    'queryStringParameters': {
 #        'name': 'testname',
-#        'user': 'patrickjuhugns',
+#        'user': 'patrickcs',
 #        'upc': '1234682'
 #    },
 #    'body': 'imagebodyhere'
