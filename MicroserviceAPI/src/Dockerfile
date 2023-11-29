@@ -1,14 +1,13 @@
-# Use an official Python runtime as a parent image
+#Python 
 FROM python:3.8
 
-# Set the working directory to /app
+#Set the working directory to /src 
 WORKDIR /src
 
-# Copy the local code and dependencies to the container
+#Copy local code and dependencies to the container
 COPY . .
 
-
-# Install any needed packages specified in requirements.txt
+#Install any needed packages
 RUN pip install --no-cache-dir -r requirements.txt
 
 #Command to run on container start
