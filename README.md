@@ -3,6 +3,20 @@ Leveraging IaC tools on AWS for the setup of serverless microservice application
 and string parameters delivered via Rest API supported by CI/CD pipeline.
 
 
+## Brief Architectural Outline
+This project as-is, manages/deploys serverless monolithic application and infrastructure 
+for a complete CI/CD process- in this case a simple application that parses request
+parameters and stores them in a DB and Bucket. This project associates corresponding
+application resources to CI/CD resources using a unique IDs in resource name (input string params provided upon setup)
+A python script initiates setup of base CI/CD infrastructure like fetching
+IAM roles, base S3 bucket creation and Cloudformation stack launch(setting stack input parameters). The CI/CD Infrastructure
+consists of leveraging CodePipeline stages(Codebuild for automation of Docker image pushes to ECR and Lambda 
+for testing and deployment phases) and can be conditionally setup with either an existing Github repo or a new Codecommit repo
+Before deploying the CI/CD infrastructure, the Serverless application(template.yml) is deployed using a template.yml 
+SAM CLI,This template describes a basic Lambda serverless application backed by a 
+Docker image and exposes an API endpoint with proxy integration.
+
+
 ## Setup Instructions:
 _*set parameters `projectid` to a short string describing the function
 and `sourcebranch` to either `prov` or `dev`. They're used to
