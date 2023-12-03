@@ -145,7 +145,6 @@ def CreateUpdate_Stack(command_data, upload_status):
                 'ParameterValue': command_data['source_branch'] 
             }
         ]
-    #patrickcarollo/miscellaneous_aws_automations
     Validate_Template(template_body)
     stack_roles = Get_RoleARN()
     if command_data['action'] == 'update':
@@ -194,7 +193,7 @@ def Validate_Template(template_body):
         print("Client error: %s" % e)      
 
 
-#Returns ARN of specific IAM role name for CloudFormation template creation
+#Returns ARN of set IAM role name for CloudFormation template creation
 def Get_RoleARN():
     try:
         response = iamclient.get_role(

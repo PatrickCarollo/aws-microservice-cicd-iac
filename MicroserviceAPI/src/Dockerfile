@@ -11,4 +11,4 @@ COPY . .
 RUN pip install --no-cache-dir -r requirements.txt
 
 #Command to run on container start
-CMD [ "aws_handler.lambda_handler" ]
+CMD [ "python", "aws_handler.py", "lambda_handler" ]

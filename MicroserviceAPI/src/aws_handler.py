@@ -6,8 +6,6 @@ s3client = boto3.client('s3')
 
 
 def lambda_handler(event, context):
-
-
     print(event)
     p = Parse_Data(event)
     if p != False:

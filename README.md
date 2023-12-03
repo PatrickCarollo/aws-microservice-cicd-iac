@@ -16,7 +16,8 @@ Before deploying the CI/CD infrastructure, the Serverless application(template.y
 SAM CLI,This template describes a basic Lambda serverless application backed by a 
 Docker image and exposes an API endpoint with proxy integration.
 
-
+## Prerequisites:
+If using GitHub as code source provider for Pipeline, a branch named 'dev' must exist before launching CI/CD stack
 ## Setup Instructions:
 _*set parameters `projectid` to a short string describing the function
 and `sourcebranch` to either `prov` or `dev`. They're used to
@@ -38,7 +39,7 @@ isolate ci/cd pipelines as well as associate ci/cd services to their correspondi
     aws ecr get-login-password --region <yourawsregion> | docker login --username AWS --password-stdin <yourawsaccountid>.dkr.ecr.<yourawsregion>.amazonaws.com
     ``` 
     ```
-    docker tag <yourECRname>:latest <yourawsaccid>.dkr.ecr.<yourawsregion>.amazonaws.com/<yourECRname>:latest
+    docker tag <imageid> <yourawsaccid>.dkr.ecr.<yourawsregion>.amazonaws.com/<yourECRname>:latest
     ```
     ```
     docker push <yourawsacountid>.dkr.ecr.<yourawsregion>.amazonaws.com/<yourECRname:latest
