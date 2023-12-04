@@ -28,7 +28,6 @@ def Construct_Request_Body(projectid):
         else:
             print('Getobject for sample/test image failed')
         req_parameters = {
-            # TODO: Test this more thoroughly
             'body': "test",
             'queryStringParameters': {
                 'name': 'testname/123456',

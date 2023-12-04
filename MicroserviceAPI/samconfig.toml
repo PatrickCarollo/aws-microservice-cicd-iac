@@ -1,0 +1,11 @@
+version = 0.1
+[default]
+[default.deploy]
+[default.deploy.parameters]
+stack_name = "microservicestackmainpush"
+s3_bucket = "aws-sam-cli-managed-default-samclisourcebucket-1nx60q3ga33u0"
+s3_prefix = "microservicestackmainpush"
+region = "us-east-1"
+capabilities = "CAPABILITY_IAM"
+parameter_overrides = "projectid=\"push\" initialimageuri=\"223634373127.dkr.ecr.us-east-1.amazonaws.com/microservice:latest\" sourcebranch=\"main\""
+image_repositories = []

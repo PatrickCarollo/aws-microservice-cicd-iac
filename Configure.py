@@ -63,7 +63,7 @@ def Upload_Resources(command_data):
     #Only used for codecommit repo
     main_repository_code = [
         'aws-microservice-cicd-iac/CICDLambda/buildspec.yaml',
-        'aws-microservice-cicd-iac/MicroserviceAPI/sourcecode/aws_handler.py',
+        'aws-microservice-cicd-iac/MicroserviceAPI/src/aws_handler.py',
         'aws-microservice-cicd-iac/CICDLambda/Dockerfile'
     ]
     
