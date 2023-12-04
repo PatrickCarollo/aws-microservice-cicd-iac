@@ -17,13 +17,13 @@ SAM CLI,This template describes a basic Lambda serverless application backed by 
 Docker image and exposes an API endpoint with proxy integration.
 
 ## Pre setup notes:
-+ If using GitHub as code source provider
-- An existing Git branch named `dev` must exist before launching CI/CD stack in dev branch support launch
-- Contents of `/scr` directory AND buildspec.yml must be copied to root 
++ If using GitHub as code source provider:
+    - An existing Git branch named `dev` must exist before launching CI/CD stack in dev branch support launch
+    - Contents of `/scr` directory AND buildspec.yml must be copied to root 
 + set parameters `projectid` to a short string describing the function
 and `sourcebranch` to either `main` or `dev`. They're used to
 isolate ci/cd pipelines as well as associate ci/cd services to their corresponding application services
-
+## Setup Instructions:
 1. Install/update SAM CLI 
 
 2. Create a private ECR in AWS console. __ECR naming format:__ `<nameofyourchoosing><sourcebranch><projectid>`
