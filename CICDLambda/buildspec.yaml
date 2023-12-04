@@ -1,17 +1,21 @@
 #Build commands for building docker image from source repo Dockerfile....
-#TODO figure out if the correct image is being sources to the respective lambda alias version
 version: 0.2
 phases:
   pre_build:
-    #phase for logging into docker through aws using repo uri. and creating image id
+    #phase for logging into docker through aws using ECR repo uri, creating image id and locally caching python
     commands:
       - echo logging in to Amazon ECR for new $Branch image upload...
       - aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin $Ecr
       - export uniquetag=$(date +%Y%m%d%H%M%S)
+      - if ! docker images -q python:3.8; then
+          docker pull python:3.8;
+        fi
   build:
     #phase for building and pushing image to ECR
     commands:
       - echo Building the Docker image for image repo $EcrRepoName...
+      - cd src
+      - ls
       - docker build -t $EcrRepoName:$uniquetag .
       - echo Pushing the Docker image to Amazon ECR...
       - docker tag $EcrRepoName:$uniquetag $Ecr/$EcrRepoName:$uniquetag

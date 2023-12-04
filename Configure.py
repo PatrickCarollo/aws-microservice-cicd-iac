@@ -64,7 +64,7 @@ def Upload_Resources(command_data):
     main_repository_code = [
         'aws-microservice-cicd-iac/CICDLambda/buildspec.yaml',
         'aws-microservice-cicd-iac/MicroserviceAPI/src/aws_handler.py',
-        'aws-microservice-cicd-iac/CICDLambda/Dockerfile'
+        'aws-microservice-cicd-iac/MicroserviceAPI/src/Dockerfile'
     ]
     
     file0 = io.BytesIO()
