@@ -1,10 +1,8 @@
 import boto3
 import json
 import os
-import base64
 s3client = boto3.client('s3')
-
-
+print('start')
 def lambda_handler(event, context):
     print(event)
     p = Parse_Data(event)

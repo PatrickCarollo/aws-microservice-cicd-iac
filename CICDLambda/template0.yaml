@@ -90,6 +90,10 @@ Resources:
             ServiceRole: !GetAtt Codebuildrole.Arn
             Source: 
                 Type: CODEPIPELINE
+            Cache:
+                Type: LOCAL
+                Modes: 
+                    - LOCAL_DOCKER_LAYER_CACHE
             Environment:
                 EnvironmentVariables: 
                         -   Name: 'Ecr'
@@ -434,11 +438,11 @@ Resources:
                                 Action: 'lambda:InvokeFunction'
                                 Resource: 
                                     Fn::ImportValue: !Sub 'microservicestack${sourcebranch}${projectid}-AppArn' 
-                            -   Effect: Deny
+                            -   Effect: Allow
                                 Action:
                                     - 'codepipeline:PutJobSuccessResult'
                                     - 'codepipeline:PutJobFailureResult'
-                                Resource: !Sub 'arn:aws:codepipeline:${AWS::Region}:${AWS::AccountId}:LambdaDeploymentPipe${sourcebranch}${projectid}'
+                                Resource: '*'
                             -   Effect: Allow
                                 Action: 
                                     -   'logs:CreateLogGroup'
@@ -488,7 +492,7 @@ Resources:
                                 Action:
                                     - 'codepipeline:PutJobSuccessResult'
                                     - 'codepipeline:PutJobFailureResult'
-                                Resource: !Sub 'arn:aws:codepipeline:${AWS::Region}:${AWS::AccountId}:LambdaDeploymentPipe${sourcebranch}${projectid}'
+                                Resource: '*'
                             -   Effect: Allow
                                 Action:
                                     - 'lambda:GetFunction'

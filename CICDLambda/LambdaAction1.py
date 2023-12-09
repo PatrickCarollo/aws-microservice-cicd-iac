@@ -19,14 +19,6 @@ def lambda_handler(event, context):
     return 'finished Temp invoke lambda function'
 def Construct_Request_Body(projectid): 
     try:
-        response = s3client.get_object(
-            Bucket = 'application-user-data-' + projectid,
-            Key = 'test/testimage.png'
-        )
-        if response['ResponseMetadata']['HTTPStatusCode'] == 200: 
-            print('Getobject for test image successful')
-        else:
-            print('Getobject for sample/test image failed')
         req_parameters = {
             'body': "test",
             'queryStringParameters': {
@@ -55,6 +47,7 @@ def Invoke_Temp_Version(json_test_request, projectid):
         )
         response_data = json.loads(response['Payload'].read().decode('utf-8'))
         if response['StatusCode'] == 200 and 'errorMessage' not in response_data:  
+            print('Response from '+ env_variables['projectid'] +' Lambda: ')
             print(response_data)
             msg = 'Successful response recieved from test invocation to Temp version: '
             print(msg)
@@ -68,6 +61,7 @@ def Invoke_Temp_Version(json_test_request, projectid):
         print("Client error: %s" % e)
         msg = 'Failed at Invoke_Temp_Version function'
         Job_Fail(msg)
+
 #Send results back to pipeline
 def Job_Success(details):
     response = pipelineclient.put_job_success_result(

@@ -1,14 +1,12 @@
-#Python 
-FROM python:3.8
-
-#Set the working directory to /src 
-WORKDIR /app
+#Python location in managed Codebuild Linux
+FROM public.ecr.aws/lambda/python:latest
 
 #Copy local code  to the container
-COPY . /app
+COPY aws_handler.py ${LAMBDA_TASK_ROOT}
 
 #Install any needed dependencies
-#RUN pip install --no-cache-dir -r requirements.txt
+COPY requirements.txt .
+RUN pip3 install -r requirements.txt --target "${LAMBDA_TASK_ROOT}"
 
 #Command to run on container start
-CMD [ "python", "aws_handler.py", "lambda_handler" ]
+CMD [ "aws_handler.lambda_handler" ]
