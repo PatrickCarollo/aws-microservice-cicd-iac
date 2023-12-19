@@ -19,10 +19,10 @@ Docker image and exposes an API endpoint with proxy integration.
 ## Pre setup notes:
 + set parameters `projectid` to a short string describing the function
 and `sourcebranch` to either `main` or `dev`. They're used to
-isolate ci/cd pipelines as well as associate ci/cd services to their corresponding application services
+isolate ci/cd pipelines as well as associate ci/cd services to their corresponding target services
 + If using GitHub as code source provider:
     - An existing Git branch named `dev` must exist before launching CI/CD stack in dev branch support launch
-    - Contents of `/scr` directory AND buildspec.yml must be copied to root 
+    - `/scr` directory AND buildspec.yml should be copied to root 
 
 ## Setup Instructions:
 1. Install/update SAM CLI 
@@ -153,14 +153,15 @@ CI/CD services
 7. Push a change to source repository branch and check AWS Codepipeline console to verify pipeline exection
 
 ## Maintenance and Limitations 11/28/23:
-This infrastructure is intended to configure BASE infrastructure for prod and dev as of meaning only core functionality
-is included, and is meant to be built ontop of, For example; setting up security on prod stack. This set of resources, as-is, is
+This infrastructure is intended to configure BASE infrastructure for- meaning only core functionality
+is included and is meant to be built ontop of, For example; setting up security on prod stack. This set of resources, as-is, is
 only architected for a single monolithic service. Considerations when refactoring for separate features; 
 1. S3 bucket and dynamodb database is currently being deployed in app stack. 
-    This Resource(s) might be elected for removal if creating for example if deploying a list or get feature. 
-2. lambdaAction1 code- how its test request is formed for image and specific parameters. 
+    This Resource(s) might be elected for removal if creating for example if deploying a list or get feature-
+    These would need reworking or remove as well as references to these resources in ci/cd stack template.yml.
+2. lambdaAction1 code- how its test request is formed for specific mock request parameters. 
 
-These would need reworking or remove as well as references to these resources in cicd stack.
+
 
 ## Contents Description: 
 `Configure.py`: Prerequisite configuration script for launching CICD stack- 

@@ -1,7 +1,7 @@
-#Python location in managed Codebuild Linux
+#Pulling Python Lambda base image to pull runtime and dependencies from
 FROM public.ecr.aws/lambda/python:latest
 
-#Copy local code  to the container
+#Copy local code to the container
 COPY aws_handler.py ${LAMBDA_TASK_ROOT}
 
 #Install any needed dependencies
