@@ -13,6 +13,8 @@ phases:
   build:
     #phase for building and pushing image to ECR
     commands:
+      - pip install --upgrade pip
+      - pip install -r requirements.txt
       - echo Building the Docker image for repo $EcrRepoName...
       - docker build -t $EcrRepoName:$uniquetag .
       - echo Tagging and Pushing the Docker image to Amazon ECR...

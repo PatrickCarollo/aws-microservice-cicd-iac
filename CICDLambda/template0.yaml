@@ -378,8 +378,6 @@ Resources:
                                 - codepipeline.amazonaws.com
                         Action: 
                             - 'sts:AssumeRole'
-            ManagedPolicyArns: 
-                - arn:aws:iam::aws:policy/AWSCodePipeline_FullAccess
             Policies:
                 -   PolicyName: root                    
                     PolicyDocument:
