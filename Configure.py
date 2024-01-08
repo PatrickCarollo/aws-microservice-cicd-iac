@@ -60,7 +60,7 @@ def Create_Bucket_Resource(command_data):
 
 #Upload stages' function code, initial buildspec
 def Upload_Resources(command_data):
-    #Only used for codecommit repo
+    #Only used for aws codecommit repo setup
     main_repository_code = [
         'aws-microservice-cicd-iac/CICDLambda/buildspec.yaml',
         'aws-microservice-cicd-iac/MicroserviceAPI/src/aws_handler.py',

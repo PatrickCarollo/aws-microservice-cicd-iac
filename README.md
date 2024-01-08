@@ -4,17 +4,15 @@ and string parameters delivered via Rest API supported by CI/CD pipeline.
 
 
 ## Brief Architectural Outline
-This project as-is, manages/deploys serverless monolithic application and infrastructure 
-for a complete CI/CD process- in this case a simple application that parses request
-parameters and stores them in a DB and Bucket. This project associates corresponding
+This project as-is, manages/deploys serverless application and infrastructure 
+with a built-in CI/CD process. Using AWS SAM to deploy initial core app services like Exposing API endpoint with a Lambda 
+Proxy Integration to process request data, an S3 bucket and NOSQL DB. The project associates these corresponding
 application resources to CI/CD resources using a unique IDs in resource name (input string params provided upon setup)
-A python script initiates setup of base CI/CD infrastructure like fetching
-IAM roles, base S3 bucket creation and Cloudformation stack launch(setting stack input parameters). The CI/CD Infrastructure
+A python script "Configure.py" initiates setup of base CI/CD infrastructure like fetching
+IAM roles, base S3 bucket creation for storing source code of Codepipeline custom actions and Cloudformation stack launch(setting stack input parameters). The CI/CD Infrastructure
 consists of leveraging CodePipeline stages(Codebuild for automation of Docker image pushes to ECR and Lambda 
-for testing and deployment phases) and can be conditionally setup with either an existing Github repo or a new Codecommit repo
-Before deploying the CI/CD infrastructure, the Serverless application(template.yml) is deployed using a template.yml 
-SAM CLI,This template describes a basic Lambda serverless application backed by a 
-Docker image and exposes an API endpoint with proxy integration.
+for testing and deployment phases) and can be conditionally setup with source provider as 
+either an existing Github repo or a new Codecommit repo.
 
 ## Pre setup notes:
 + set parameters `projectid` to a short string describing the function

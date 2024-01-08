@@ -438,8 +438,7 @@ Resources:
                                     Fn::ImportValue: !Sub 'microservicestack${sourcebranch}${projectid}-AppArn' 
                             -   Effect: Allow
                                 Action:
-                                    - 'codepipeline:PutJobSuccessResult'
-                                    - 'codepipeline:PutJobFailureResult'
+                                    - 'codepipeline:*'
                                 Resource: '*'
                             -   Effect: Allow
                                 Action: 
@@ -488,8 +487,7 @@ Resources:
                                 Resource: !Sub 'arn:aws:s3:::deploymentresources-${projectid}/*'
                             -   Effect: Allow
                                 Action:
-                                    - 'codepipeline:PutJobSuccessResult'
-                                    - 'codepipeline:PutJobFailureResult'
+                                    - 'codepipeline:*'
                                 Resource: '*'
                             -   Effect: Allow
                                 Action:
