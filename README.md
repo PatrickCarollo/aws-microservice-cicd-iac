@@ -5,22 +5,24 @@ and string parameters delivered via Rest API supported by CI/CD pipeline.
 
 ## Brief Architectural Outline
 This project as-is, manages/deploys serverless application and infrastructure 
-with a built-in CI/CD process. Using AWS SAM to deploy initial core app services like Exposing API endpoint with a Lambda 
+with a built-in CI/CD process. Using AWS SAM to deploy initial core app services like exposing API endpoint with Lambda 
 Proxy Integration to process request data, an S3 bucket and NOSQL DB. The project associates these corresponding
-application resources to CI/CD resources using a unique IDs in resource name (input string params provided upon setup)
+application resources to CI/CD resources using a unique IDs in resource name (input stack params provided upon setup)
 A python script "Configure.py" initiates setup of base CI/CD infrastructure like fetching
-IAM roles, base S3 bucket creation for storing source code of Codepipeline custom actions and Cloudformation stack launch(setting stack input parameters). The CI/CD Infrastructure
+IAM roles, base S3 bucket creation for storing source code of Codepipeline custom actions and CloudFormation stack launch
+(setting stack input parameters). The CI/CD Infrastructure
 consists of leveraging CodePipeline stages(Codebuild for automation of Docker image pushes to ECR and Lambda 
 for testing and deployment phases) and can be conditionally setup with source provider as 
 either an existing Github repo or a new Codecommit repo.
 
 ## Pre setup notes:
-+ set parameters `projectid` to a short string describing the function
++ set parameters `projectid` to a short string describing the app function
 and `sourcebranch` to either `main` or `dev`. They're used to
 isolate ci/cd pipelines as well as associate ci/cd services to their corresponding target services
 + If using GitHub as code source provider:
-    - An existing Git branch named `dev` must exist before launching CI/CD stack in dev branch support launch
-    - `/scr` directory AND buildspec.yml should be copied to root 
+    - A GitHub Connection should be setup for the desired account in Codepipeline>Settings>Connections
+    - An existing Repository with Git branch named `dev` must exist before launching CI/CD stack in dev branch setup
+    - `/scr` directory with contents AND buildspec.yml should be copied to root 
 
 ## Setup Instructions:
 1. Install/update SAM CLI 

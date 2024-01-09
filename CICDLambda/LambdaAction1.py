@@ -22,9 +22,7 @@ def Construct_Request_Body(projectid):
         req_parameters = {
             'body': "test",
             'queryStringParameters': {
-                'name': 'testname/123456',
-                'upc': 'test',
-                'user': 'test'
+                'test': 'test'
             }    
         }
         json_test_request = json.dumps(req_parameters)

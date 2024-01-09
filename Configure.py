@@ -37,7 +37,7 @@ def Check_Bucket_Resource(command_data):
     try:
         response = s3client.list_objects(
             Bucket = command_data['resources_bucket_name'],
-            )    
+            )
         print(command_data['resources_bucket_name']+ ' already found')
         return command_data['resources_bucket_name']
 
