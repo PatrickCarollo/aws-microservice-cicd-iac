@@ -17,7 +17,6 @@ Parameters:
         AllowedValues: 
             - 'main'
             - 'dev'        
-
 Conditions:
     GHrep: !Equals
         - !Ref repositoryprovider
@@ -37,7 +36,7 @@ Conditions:
         
 Resources:
 ###Begin CI/CD Pipeline services setup
-    #Event for Codecommit source change with target as CiCD pipeline start.
+    #Event for Codecommit source change with target as CICD pipeline start.
     Sourcechangeevent:
         Condition: AWSrep
         Type: AWS::Events::Rule
@@ -67,10 +66,8 @@ Resources:
                     referenceName: 
                         !If
                             - Masterbranch
-                            - 'master'
-                            -   
-                                - anything-but: 
-                                    - 'master'
+                            - 'main'
+                            - 'dev'
     #Retains one source repository once condition Masterbranch is recieved as input
     Codecommitrepository:
         Condition: Awsmaster
@@ -78,10 +75,7 @@ Resources:
         Properties:
             RepositoryName: !Sub repositorynamepath
             Code:
-                BranchName: master
-                S3:
-                    Bucket: !Sub 'deploymentresources-${projectid}'
-                    Key: 'cicd/StartingAppCode.zip'
+                BranchName: main
     #Stage for executing buildspec.yml commands on ingested artifacts- in this case build from Dockerfile and push to ECR
     Buildstage:
         Type: AWS::CodeBuild::Project
@@ -102,7 +96,6 @@ Resources:
                         -   Name: 'EcrRepoName'
                             Type: PLAINTEXT
                             Value: !Select [1, !Split ["/", Fn::ImportValue: !Sub 'microservicestack${sourcebranch}${projectid}-EcrUri']]
-                        #Branch variable is currently unused in buildspec file
                         -   Name: 'Branch'
                             Type: PLAINTEXT
                             Value: 
@@ -126,7 +119,7 @@ Resources:
         Properties: 
             ApplicationName: !Sub 'lambdaappdeploy${sourcebranch}${projectid}'
             ComputePlatform: Lambda
-    #Configures how rivisions are deployed
+    #Configures how rivisions are rolled out
     Deploygroup:
         Type: AWS::CodeDeploy::DeploymentGroup
         Properties:
@@ -146,7 +139,7 @@ Resources:
     Lambdaaction1:
         Type: AWS::Lambda::Function
         Properties:
-            FunctionName: !Sub 'TestReqAction${sourcebranch}${projectid}'
+            FunctionName: !Sub 'test-req-action-${sourcebranch}${projectid}'
             Environment:
                 Variables: 
                     AppName: 
@@ -157,12 +150,12 @@ Resources:
             Runtime: python3.7
             Code:
                 S3Bucket: !Sub 'deploymentresources-${sourcebranch}${projectid}'
-                S3Key: 'cicd/LambdaAction1.zip'
+                S3Key: 'cicd/lambda-action1.zip'
     #Deployment action for swapping versions on main alias
     Lambdaaction2:
         Type: AWS::Lambda::Function
         Properties:
-            FunctionName: !Sub 'LambdaDeploymentAction${sourcebranch}${projectid}'
+            FunctionName: !Sub 'deployment-action-${sourcebranch}${projectid}'
             Environment:
                 Variables: 
                     AppName: 
@@ -176,13 +169,13 @@ Resources:
             Runtime: python3.7
             Code:
                 S3Bucket: !Sub 'deploymentresources-${sourcebranch}${projectid}'
-                S3Key: 'cicd/LambdaAction2.zip'
+                S3Key: 'cicd/lambda-action2.zip'
     #Assemble pipeline stages using CodePipeline service
     Lambdapipeline:
         Type: AWS::CodePipeline::Pipeline
         Properties:
             RoleArn: !GetAtt Codepipelinerole.Arn
-            Name: !Sub 'LambdaDeploymentPipe${sourcebranch}${projectid}'
+            Name: !Sub 'microservice-deploy${sourcebranch}${projectid}'
             ArtifactStore:
                     Type: S3
                     Location: !Sub 'deploymentresources-${sourcebranch}${projectid}'
@@ -208,7 +201,7 @@ Resources:
                                             - 'master'
                                             - 'dev' 
                                         PollForSourceChanges: false
-                            -   
+                            -
                                 -   Name: 'SourceRivisionGitHub'
                                     OutputArtifacts: 
                                         - Name: GithubOutput
@@ -290,7 +283,7 @@ Resources:
                         Statement: 
                             -   Effect: Allow
                                 Action: 'codepipeline:StartPipelineExecution'
-                                Resource: !Sub 'arn:aws:codepipeline:${AWS::Region}:${AWS::AccountId}:LambdaDeploymentPipe${sourcebranch}${projectid}' 
+                                Resource: !Sub 'arn:aws:codepipeline:${AWS::Region}:${AWS::AccountId}:microservice-deploy${sourcebranch}${projectid}' 
     #Permissions for codebuild container commands
     Codebuildrole:                  
         Type: AWS::IAM::Role
@@ -330,8 +323,8 @@ Resources:
                                 Resource: 
                                     !If
                                         -  AWSrep
-                                        - !Sub 'arn:aws:s3:::deploymentresources-${sourcebranch}${projectid}/LambdaDeploymentPipe/Codecommit/*'                                
-                                        - !Sub 'arn:aws:s3:::deploymentresources-${sourcebranch}${projectid}/LambdaDeploymentPipe/GithubOutp/*'
+                                        - !Sub 'arn:aws:s3:::deploymentresources-${sourcebranch}${projectid}/microservice-deploy/Codecommit/*'                                
+                                        - !Sub 'arn:aws:s3:::deploymentresources-${sourcebranch}${projectid}/microservice-deploy/GithubOutp/*'
                             -   Effect: Allow
                                 Action: 'ecr:GetAuthorizationToken'
                                 Resource: '*'    

@@ -16,23 +16,32 @@ for testing and deployment phases) and can be conditionally setup with source pr
 either an existing Github repo or a new Codecommit repo.
 
 ## Pre setup notes:
-+ set parameters `projectid` to a short string describing the app function
++ set parameters `projectid` to a short string describing the microservice use
 and `sourcebranch` to either `main` or `dev`. They're used to
 isolate ci/cd pipelines as well as associate ci/cd services to their corresponding target services
 + If using GitHub as code source provider:
-    - A GitHub Connection should be setup for the desired account in Codepipeline>Settings>Connections
-    - An existing Repository with Git branch named `dev` must exist before launching CI/CD stack in dev branch setup
-    - `/scr` directory with contents AND buildspec.yml should be copied to root 
+    - A Connection should be setup for the desired account in Codepipeline>Settings>Connections
+    - Should run the cp cmds first to 
++ Per each microservice- An existing Repository with Git branch named `dev` or `main` 
+    should exist before launching CI/CD stack
 
-## Setup Instructions:
+## Setup Instructions
+1. Copy directories from this repository to desired new microservice repository
+    ```
+    cp /aws-microservice-cicd-iac/cicd-services/ <yourreponame>/
+    ```
+    ```
+    cp /aws-microservice-cicd-iac/api-services/ <yourreponame>/
+    ```
+    Then move buildspec.yaml to root
 1. Install/update SAM CLI 
 
 2. Create a private ECR in AWS console. __ECR naming format:__ `<nameofyourchoosing><sourcebranch><projectid>`
 
-3. Sign into docker using aws auth, build desired initial docker image, push
-   *Skip docker build if you've refactored (see Maintenance and Limitations) and already have an Image you'd like to use
+3. Sign into docker using aws auth, build desired initial starting docker image, push
+   *Skip build if you already have Image or, for example, launching for dev stack
     ```
-    cd aws-microservice-cicd-iac/MicroserviceAPI/src
+    cd aws-microservice-cicd-iac/api-services/src
     ```
     ```
     docker build -t <yourECRname> .
@@ -49,7 +58,7 @@ isolate ci/cd pipelines as well as associate ci/cd services to their correspondi
     
 4. Deploy microservice stack
     ```
-    cd aws-microservice-cicd-iac/MicroserviceAPI
+    cd aws-microservice-cicd-iac/api-services
     ```
     ```
     sam build
@@ -154,29 +163,29 @@ CI/CD services
 
 ## Maintenance and Limitations 11/28/23:
 This infrastructure is intended to configure BASE infrastructure for- meaning only core functionality
-is included and is meant to be built ontop of, For example; setting up security on prod stack. This set of resources, as-is, is
-only architected for a single monolithic service. Considerations when refactoring for separate features; 
+is included and is meant to be built ontop of, for example; setting up security on prod stack. 
+Considerations when refactoring for separate features; 
 1. S3 bucket and dynamodb database is currently being deployed in app stack. 
     This Resource(s) might be elected for removal if creating for example if deploying a list or get feature-
     These would need reworking or remove as well as references to these resources in ci/cd stack template.yml.
-2. lambdaAction1 code- how its test request is formed for specific mock request parameters. 
+2. lambda-action1 code- how its test request is formed for specific mock request parameters. 
 
 
 
 ## Contents Description: 
 `Configure.py`: Prerequisite configuration script for launching CICD stack- 
 deploys resource bucket for subsequent Cloudformation Template launch. It accepts runtime inputs that are passed into 
-stack creation call as Parameters for template0.yml.
+stack creation call as Parameters for cicd-template.yml.
 
-`MicroserviceAPI/template.yml`: SAM Template for deploying application services and 
-creates stack Output Parameters from the resulting launched service's ARNs for template0.yml to import.
+`api-services/template.yml`: SAM Template for deploying application services and 
+creates stack Output Parameters from the resulting launched service's ARNs for cicd-template.yml to import.
 Sets up the following:  
 * User S3 storage bucket, 
 * DynamoDBuser database table that application code will write to,
 * Api Gateway Rest API integrated with Lambda as compute service & Alias to manage versions.
     This configuration is setup to forward API requests to Lambda Live Alias.
 
-`CICDLambda/template0.yml`:  Cloudformation Template for deploying CI/CD process' core services by launching a Codepipeline pipeline 
+`CICDLambda/cicd-template.yml`:  Cloudformation Template for deploying CI/CD process' core services by launching a Codepipeline pipeline 
 and it's underlying stages. This template can be conditionally run based on parameters passed in at launch 
 from Configure.py script. All stages' services are deployed along with respective IAM Service Roles granting least 
 privelage access. The conditional launches are for using github or aws as source repository as well as setting source branch.

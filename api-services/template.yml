@@ -92,7 +92,7 @@ Resources:
     Mainlambdafunction:
         Type: AWS::Serverless::Function
         Properties:
-            FunctionName: !Sub 'MainLambdaMS${sourcebranch}${projectid}'
+            FunctionName: !Sub 'microservice-${sourcebranch}${projectid}'
             PackageType: Image
             ImageUri: !Ref initialimageuri
             Environment:
