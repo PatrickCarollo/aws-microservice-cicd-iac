@@ -28,10 +28,10 @@ isolate ci/cd pipelines as well as associate ci/cd services to their correspondi
 ## Setup Instructions
 1. Copy directories from this repository to desired new microservice repository
     ```
-    cp /aws-microservice-cicd-iac/cicd-services/ <yourreponame>/
+    cp -r aws-microservice-cicd-iac/cicd-services <yourreponame>/
     ```
     ```
-    cp /aws-microservice-cicd-iac/api-services/ <yourreponame>/
+    cp -r aws-microservice-cicd-iac/api-services <yourreponame>/
     ```
     Then move buildspec.yaml to root
 1. Install/update SAM CLI 
