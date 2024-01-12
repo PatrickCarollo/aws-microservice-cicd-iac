@@ -1,4 +1,4 @@
-#Script for deploying prerequisites for 'cicd-template.yaml' as well as running CF stack commands for ci/cd pipeline configuration.
+#Script for deploying prerequisites for 'template0.yaml' as well as running CF stack commands for ci/cd pipeline configuration.
 import io
 import random
 import boto3
@@ -37,7 +37,7 @@ def Check_Bucket_Resource(command_data):
     try:
         response = s3client.list_objects(
             Bucket = command_data['resources_bucket_name'],
-            )
+            )    
         print(command_data['resources_bucket_name']+ ' already found')
         return command_data['resources_bucket_name']
 
@@ -46,7 +46,6 @@ def Check_Bucket_Resource(command_data):
         return False
         
 #S3 bucket to store resources for CloudFormation to reference
-#such as lambda.zip, appspec.yaml and other deployment resources
 def Create_Bucket_Resource(command_data):   
     try:
         response = s3client.create_bucket(
@@ -58,17 +57,17 @@ def Create_Bucket_Resource(command_data):
         
         return command_data['resources_bucket_name']
 
-#Upload stages' function code, initial buildspec
+#Upload stages' function code
 def Upload_Resources(command_data):
     
     file1 = io.BytesIO()
     with ZipFile(file1,'w',ZIP_DEFLATED) as obj:
-        obj.write('aws-microservice-cicd-iac/cicd-services/lambda-action1.py', arcname = 'lambda-action1.py')
+        obj.write('app1/CICDLambda/lambda-action1.py', arcname = 'lambda-action1.py')
     file1.seek(0)
     
     file2 = io.BytesIO()
     with ZipFile(file2,'w',ZIP_DEFLATED) as obj:
-        obj.write('aws-microservice-cicd-iac/cicd-services/lambda-action2.py', arcname = 'lambda-action2.py')
+        obj.write('app1/CICDLambda/lambda-action2.py', arcname = 'lambda-action2.py')
     file2.seek(0)
     objects = [
         {    
@@ -98,12 +97,12 @@ def Upload_Resources(command_data):
     return data
 
 
-#Conditionally updates or creates from ci/cd services 'cicd-template.yaml' CF template
+#Conditionally updates or creates from ci/cd services 'template0' CF template
 def CreateUpdate_Stack(command_data, upload_status):
-    if upload_status != 0:
-        with open('aws-microservice-cicd-iac/cicd-services/cicd-template.yaml') as temp:
+    if upload_status != False:
+        with open('app1/CICDLambda/cicd-template.yaml') as temp:
             template_body = temp.read()
-        name = 'CICD-stack-'+ command_data['source_branch']+ command_data['projectid']
+        name = 'CICDstack-'+ command_data['source_branch']+ command_data['projectid']
         params = [ 
             {
                 'ParameterKey': 'repositoryprovider',
@@ -162,7 +161,7 @@ def CreateUpdate_Stack(command_data, upload_status):
     return stackresponse
         
 
-#Prints out validation result of local cicd-template.yaml
+#Prints out validation result of local template0.yaml
 def Validate_Template(template_body):
     try:
         response = cfclient.validate_template(
@@ -198,7 +197,7 @@ def main():
         if a == False:
             b = Create_Bucket_Resource(q)
     c = Upload_Resources(q)
-    CreateUpdate_Stack(q,c)
+    CreateUpdate_Stack(q, c)
 
 if __name__ == '__main__':
     main()

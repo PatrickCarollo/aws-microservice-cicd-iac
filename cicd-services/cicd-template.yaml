@@ -145,7 +145,7 @@ Resources:
                     AppName: 
                         Fn::ImportValue: !Sub 'microservicestack${sourcebranch}${projectid}-AppName' 
                     projectid: !Ref projectid
-            Handler: LambdaAction1.lambda_handler
+            Handler: lambda-action1.lambda_handler
             Role: !GetAtt Lambdaction1role.Arn
             Runtime: python3.7
             Code:
@@ -164,7 +164,7 @@ Resources:
                     livealias: 
                         Fn::ImportValue: !Sub 'microservicestack${sourcebranch}${projectid}-AliasName'
                     codedeployapp: !Ref Application           
-            Handler: LambdaAction2.lambda_handler
+            Handler: lambda-action2.lambda_handler
             Role: !GetAtt Lambdaction2role.Arn
             Runtime: python3.7
             Code:
@@ -175,7 +175,7 @@ Resources:
         Type: AWS::CodePipeline::Pipeline
         Properties:
             RoleArn: !GetAtt Codepipelinerole.Arn
-            Name: !Sub 'microservice-deploy${sourcebranch}${projectid}'
+            Name: !Sub 'msdeploy${sourcebranch}${projectid}'
             ArtifactStore:
                     Type: S3
                     Location: !Sub 'deploymentresources-${sourcebranch}${projectid}'
@@ -283,7 +283,7 @@ Resources:
                         Statement: 
                             -   Effect: Allow
                                 Action: 'codepipeline:StartPipelineExecution'
-                                Resource: !Sub 'arn:aws:codepipeline:${AWS::Region}:${AWS::AccountId}:microservice-deploy${sourcebranch}${projectid}' 
+                                Resource: !Sub 'arn:aws:codepipeline:${AWS::Region}:${AWS::AccountId}:msdeploy${sourcebranch}${projectid}' 
     #Permissions for codebuild container commands
     Codebuildrole:                  
         Type: AWS::IAM::Role
@@ -323,8 +323,8 @@ Resources:
                                 Resource: 
                                     !If
                                         -  AWSrep
-                                        - !Sub 'arn:aws:s3:::deploymentresources-${sourcebranch}${projectid}/microservice-deploy/Codecommit/*'                                
-                                        - !Sub 'arn:aws:s3:::deploymentresources-${sourcebranch}${projectid}/microservice-deploy/GithubOutp/*'
+                                        - !Sub 'arn:aws:s3:::deploymentresources-${sourcebranch}${projectid}/msdeploy${sourcebranch}${projectid}/Codecommit/*'                                
+                                        - !Sub 'arn:aws:s3:::deploymentresources-${sourcebranch}${projectid}/msdeploy${sourcebranch}${projectid}/GithubOutp/*'
                             -   Effect: Allow
                                 Action: 'ecr:GetAuthorizationToken'
                                 Resource: '*'    

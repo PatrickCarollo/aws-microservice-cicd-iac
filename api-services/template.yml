@@ -33,7 +33,7 @@ Resources:
                 -   
                     AttributeName: 'id'
                     AttributeType: S
-                -   
+                -
                     AttributeName: 'TransactionData'
                     AttributeType: S
                 -   
@@ -72,7 +72,7 @@ Resources:
     Restapi:
         Type: AWS::Serverless::Api
         Properties:
-            Name: !Sub 'MainApi${sourcebranch}${projectid}'
+            Name: !Sub 'microserviceapi${sourcebranch}${projectid}'
             StageName: 'Live'
             #TODO: Allow binary request media types data
             DefinitionBody:
@@ -123,6 +123,10 @@ Resources:
                     Statement: 
                         -   Effect: Allow
                             Action: 
+                                -   'sns:Publish'
+                            Resource: '*'
+                        -   Effect: Allow
+                            Action: 
                                 -   'dynamodb:PutItem'
                                 -   'dynamodb:GetItem'
                                 -   'dynamodb:Query'
@@ -141,6 +145,7 @@ Resources:
                                 - ''
                                 -   - !GetAtt ApplicationBucket.Arn
                                     - '/*'
+                        
     FunctionLogGroup:
         Type: AWS::Logs::LogGroup
         Properties:
