@@ -33,7 +33,10 @@ Conditions:
     Awsmaster: !And
         - Condition: Masterbranch
         - Condition: AWSrep
-        
+    InitialbuildARM: !Equals
+        - Fn::ImportValue: !Sub 'microservicestack${sourcebranch}${projectid}-ComputeType' 
+        - 'arm'
+
 Resources:
 ###Begin CI/CD Pipeline services setup
     #Event for Codecommit source change with target as CICD pipeline start.
@@ -107,7 +110,11 @@ Resources:
                             Type: PLAINTEXT
                             Value: !Ref projectid           
                 ComputeType: BUILD_GENERAL1_SMALL
-                Image: aws/codebuild/standard:5.0
+                Image: 
+                    !If
+                        - InitialbuildARM
+                        - aws/codebuild/amazonlinux2-aarch64-standard:3.0
+                        - aws/codebuild/standard:5.0 
                 Type: LINUX_CONTAINER
                 PrivilegedMode: true
             Artifacts: 
@@ -147,7 +154,7 @@ Resources:
                     projectid: !Ref projectid
             Handler: lambda-action1.lambda_handler
             Role: !GetAtt Lambdaction1role.Arn
-            Runtime: python3.7
+            Runtime: python3.11
             Code:
                 S3Bucket: !Sub 'deploymentresources-${sourcebranch}${projectid}'
                 S3Key: 'cicd/lambda-action1.zip'

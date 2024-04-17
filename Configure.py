@@ -1,11 +1,9 @@
 #Script for deploying prerequisites for 'template0.yaml' as well as running CF stack commands for ci/cd pipeline configuration.
 import io
-import random
 import boto3
 import json
 from zipfile import ZipFile, ZIP_DEFLATED
 from botocore.exceptions import ClientError
-
 
 cfclient = boto3.client('cloudformation')
 s3client = boto3.client('s3')
@@ -54,20 +52,17 @@ def Create_Bucket_Resource(command_data):
         print('Resources bucket launched: '+ command_data['resources_bucket_name'] )
     except ClientError as e:
         print("Client error: %s" % e)
-        
         return command_data['resources_bucket_name']
 
-#Upload stages' function code
+#Upload ci/cd pipeline stages' function code for test and deploy
 def Upload_Resources(command_data):
-    
     file1 = io.BytesIO()
     with ZipFile(file1,'w',ZIP_DEFLATED) as obj:
-        obj.write('app1/CICDLambda/lambda-action1.py', arcname = 'lambda-action1.py')
+        obj.write('app1/cicd-services/lambda-action1.py', arcname = 'lambda-action1.py')
     file1.seek(0)
-    
     file2 = io.BytesIO()
     with ZipFile(file2,'w',ZIP_DEFLATED) as obj:
-        obj.write('app1/CICDLambda/lambda-action2.py', arcname = 'lambda-action2.py')
+        obj.write('app1/cicd-services/lambda-action2.py', arcname = 'lambda-action2.py')
     file2.seek(0)
     objects = [
         {    
@@ -78,7 +73,6 @@ def Upload_Resources(command_data):
             'body': file2,
             'key': 'cicd/lambda-action2.zip'
         }    
-    
     ]
     for x in objects:    
         try:
@@ -95,7 +89,6 @@ def Upload_Resources(command_data):
         except ClientError as e:
             print("Client error: %s" % e)
     return data
-
 
 #Conditionally updates or creates from ci/cd services 'template0' CF template
 def CreateUpdate_Stack(command_data, upload_status):

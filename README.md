@@ -5,9 +5,9 @@ and string parameters delivered via Rest API supported by CI/CD pipeline.
 
 ## Brief Architectural Outline
 This project as-is, manages/deploys serverless application and infrastructure 
-with a built-in CI/CD process. Using AWS SAM to deploy initial core app services like exposing API endpoint with Lambda 
+with an included CI/CD process. Using AWS SAM to deploy initial core app services like exposing API endpoint with Lambda 
 Proxy Integration to process request data, an S3 bucket and NOSQL DB. The project associates these corresponding
-application resources to CI/CD resources using a unique IDs in resource name (input stack params provided upon setup)
+application resources to CI/CD resources using unique IDs in resource name (input stack params provided upon setup).
 A python script "Configure.py" initiates setup of base CI/CD infrastructure like fetching
 IAM roles, base S3 bucket creation for storing source code of Codepipeline custom actions and CloudFormation stack launch
 (setting stack input parameters). The CI/CD Infrastructure
@@ -16,12 +16,11 @@ for testing and deployment phases) and can be conditionally setup with source pr
 either an existing Github repo or a new Codecommit repo.
 
 ## Pre setup notes:
-+ set parameters `projectid` to a short string describing the microservice use
++ you'll set `projectid` to a short string describing the microservice use
 and `sourcebranch` to either `main` or `dev`. They're used to
 isolate ci/cd pipelines as well as associate ci/cd services to their corresponding target services
 + If using GitHub as code source provider:
-    - A Connection should be setup for the desired account in Codepipeline>Settings>Connections
-    - Should run the cp cmds first to 
+    - A Connection should be setup for the desired account in Console at Codepipeline>Settings>Connections
 + Per each microservice- An existing Repository with Git branch named `dev` or `main` 
     should exist before launching CI/CD stack
 
@@ -33,15 +32,21 @@ isolate ci/cd pipelines as well as associate ci/cd services to their correspondi
     ```
     cp -r aws-microservice-cicd-iac/api-services <yourreponame>/
     ```
-    Then move buildspec.yaml to root
-1. Install/update SAM CLI 
+    ```
+    - Move <yourreponame>/cicd-services/buildspec.yaml to root of <yourreponame>
+    - Change location of lambda stages' code by modifying the root folder name in Upload_Resources() to match your new repo
 
-2. Create a private ECR in AWS console. __ECR naming format:__ `<nameofyourchoosing><sourcebranch><projectid>`
+2. Install/update SAM CLI 
+    ```
+    install sam cli
+    ```
 
-3. Sign into docker using aws auth, build desired initial starting docker image, push
+3. Create a private ECR in AWS console. __ECR naming format:__ `<nameofyourchoosing><sourcebranch><projectid>`
+
+4. Sign into docker using aws auth, build desired initial starting docker image, push
    *Skip build if you already have Image or, for example, launching for dev stack
     ```
-    cd aws-microservice-cicd-iac/api-services/src
+    cd <yourreponame>/api-services/src
     ```
     ```
     docker build -t <yourECRname> .
@@ -56,9 +61,9 @@ isolate ci/cd pipelines as well as associate ci/cd services to their correspondi
     docker push <yourawsacountid>.dkr.ecr.<yourawsregion>.amazonaws.com/<yourECRname:latest
     ```
     
-4. Deploy microservice stack
+5. Deploy microservice stack(from api-directory)
     ```
-    cd aws-microservice-cicd-iac/api-services
+    cd ../
     ```
     ```
     sam build
@@ -69,7 +74,7 @@ isolate ci/cd pipelines as well as associate ci/cd services to their correspondi
     * Fill in SAM prompts & template parameters.. __stack name format:__ `microservicestack<sourcebranch><projectid>`
     * Check AWS Cloudformation console to verify the launch status
 
-5. Create CI/CD stack service role. Run following CLI cmds.
+6. Create CI/CD stack service role. Run following CLI cmds.
 
     ```
     aws iam create-role --role-name MainCICDStackServiceRole --assume-role-policy-document '{
@@ -156,10 +161,11 @@ isolate ci/cd pipelines as well as associate ci/cd services to their correspondi
     }'
     ```
 
-6. Run `Configure.py` script and enter input prompts- use the same `projectid` param as entered in SAM microservice stack to associate
+7. Run `Configure.py` script in aws-microservice-cicd-iac and enter input prompts- use the same `projectid` param as entered in SAM microservice stack to associate
 CI/CD services 
 
-7. Push a change to source repository branch and check AWS Codepipeline console to verify pipeline exection
+8. Push a change to source repository branch and check AWS Codepipeline console to verify pipeline exection- as well
+as Lambda>Alias>Versions to check if the new version was deployed.
 
 ## Maintenance and Limitations 11/28/23:
 This infrastructure is intended to configure BASE infrastructure for- meaning only core functionality
@@ -168,7 +174,7 @@ Considerations when refactoring for separate features;
 1. S3 bucket and dynamodb database is currently being deployed in app stack. 
     This Resource(s) might be elected for removal if creating for example if deploying a list or get feature-
     These would need reworking or remove as well as references to these resources in ci/cd stack template.yml.
-2. lambda-action1 code- how its test request is formed for specific mock request parameters. 
+2. lambda-action1 code- how it's test request is formed for specific mock request parameters. 
 
 
 

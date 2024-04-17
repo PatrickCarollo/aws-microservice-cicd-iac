@@ -11,9 +11,9 @@ def lambda_handler(event, context):
         if p != False:
             response_data = json.dumps(p)
         else:
-            repsonse_data = 'Failed to parse'
+            response_data = 'Failed to parse'
     else:
-        response_data = 'Pipeline Action mock test invokation'
+        response_data = 'Pipeline Action mock test invocation'
     #Creating response format 
     main_response_object = {
         'statusCode': 200,

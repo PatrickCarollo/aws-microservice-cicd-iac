@@ -10,7 +10,12 @@ Parameters:
         Type: String
         AllowedValues: 
             - 'main'
-            - 'dev'    
+            - 'dev'
+    computetype:
+        Type: String
+        AllowedValues: 
+            - 'arm'
+            - 'x84'
 Resources:
 ###Begin microservice application infrastructure setup
     ApplicationBucket:
@@ -94,6 +99,8 @@ Resources:
         Properties:
             FunctionName: !Sub 'microservice-${sourcebranch}${projectid}'
             PackageType: Image
+            Architectures: 
+                    - !Ref computetype
             ImageUri: !Ref initialimageuri
             Environment:
                 Variables:
@@ -189,8 +196,8 @@ Outputs:
     EcrUri:
         Value: !Select [0, !Split [":", !Ref initialimageuri]]
         Export: 
-            Name: !Sub '${AWS::StackName}-EcrUri'    
-            
-    
-        
-    
+            Name: !Sub '${AWS::StackName}-EcrUri'
+    ComputeType:
+        Value: !Ref computetype
+        Export: 
+            Name: !Ref computetype
