@@ -14,7 +14,7 @@ Parameters:
     computetype:
         Type: String
         AllowedValues: 
-            - 'arm'
+            - 'arm64'
             - 'x84'
 Resources:
 ###Begin microservice application infrastructure setup

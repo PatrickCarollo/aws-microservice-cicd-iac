@@ -93,7 +93,7 @@ def Upload_Resources(command_data):
 #Conditionally updates or creates from ci/cd services 'template0' CF template
 def CreateUpdate_Stack(command_data, upload_status):
     if upload_status != False:
-        with open('app1/CICDLambda/cicd-template.yaml') as temp:
+        with open('app1/cicd-services/cicd-template.yaml') as temp:
             template_body = temp.read()
         name = 'CICDstack-'+ command_data['source_branch']+ command_data['projectid']
         params = [ 
@@ -120,6 +120,9 @@ def CreateUpdate_Stack(command_data, upload_status):
         ]
     Validate_Template(template_body)
     stack_roles = Get_RoleARN()
+    if stack_roles == 0:
+        print('Stopped stack launch process, no cicd stack role found')
+        return
     if command_data['action'] == 'update':
         try:
             response = cfclient.update_stack(
@@ -149,7 +152,6 @@ def CreateUpdate_Stack(command_data, upload_status):
     else:
         print(response)
         print('stack creation failed')
-        
         stackresponse = 0
     return stackresponse
         

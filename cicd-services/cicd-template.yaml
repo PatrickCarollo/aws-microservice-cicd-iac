@@ -17,6 +17,11 @@ Parameters:
         AllowedValues: 
             - 'main'
             - 'dev'        
+    #TODO: fix parameter- from microservice stack, is trying to import compute type
+    computetype:
+        Type: String
+        Default: 
+            !Sub '${!ImportValue microservicestack${sourcebranch}${projectid}-ComputeType}'
 Conditions:
     GHrep: !Equals
         - !Ref repositoryprovider
@@ -34,7 +39,7 @@ Conditions:
         - Condition: Masterbranch
         - Condition: AWSrep
     InitialbuildARM: !Equals
-        - Fn::ImportValue: !Sub 'microservicestack${sourcebranch}${projectid}-ComputeType' 
+        - !Ref computetype
         - 'arm'
 
 Resources:

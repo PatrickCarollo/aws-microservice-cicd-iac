@@ -32,9 +32,8 @@ isolate ci/cd pipelines as well as associate ci/cd services to their correspondi
     ```
     cp -r aws-microservice-cicd-iac/api-services <yourreponame>/
     ```
-    ```
     - Move <yourreponame>/cicd-services/buildspec.yaml to root of <yourreponame>
-    - Change location of lambda stages' code by modifying the root folder name in Upload_Resources() to match your new repo
+    - Change location of lambda stages' code by modifying the root folder name in Upload_Resources() to match your new   repo
 
 2. Install/update SAM CLI 
     ```
@@ -44,7 +43,7 @@ isolate ci/cd pipelines as well as associate ci/cd services to their correspondi
 3. Create a private ECR in AWS console. __ECR naming format:__ `<nameofyourchoosing><sourcebranch><projectid>`
 
 4. Sign into docker using aws auth, build desired initial starting docker image, push
-   *Skip build if you already have Image or, for example, launching for dev stack
+   *Skip build if you already have Image or launching for development stack
     ```
     cd <yourreponame>/api-services/src
     ```
@@ -61,7 +60,7 @@ isolate ci/cd pipelines as well as associate ci/cd services to their correspondi
     docker push <yourawsacountid>.dkr.ecr.<yourawsregion>.amazonaws.com/<yourECRname:latest
     ```
     
-5. Deploy microservice stack(from api-directory)
+5. Deploy microservice stack(from api-services)
     ```
     cd ../
     ```
@@ -93,7 +92,7 @@ isolate ci/cd pipelines as well as associate ci/cd services to their correspondi
     ```
     aws iam put-role-policy --role-name MainCICDStackServiceRole --policy-name MainCICDStackServicepolicy --policy-document '{
         "Version": "2012-10-17",
-        "Statement":
+        "Statement": [
             {
                 "Effect": "Allow",
                 "Action": [
@@ -161,8 +160,7 @@ isolate ci/cd pipelines as well as associate ci/cd services to their correspondi
     }'
     ```
 
-7. Run `Configure.py` script in aws-microservice-cicd-iac and enter input prompts- use the same `projectid` param as entered in SAM microservice stack to associate
-CI/CD services 
+7. Run `Configure.py` script in aws-microservice-cicd-iac and enter input prompts- use the same `projectid` param as entered in SAM microservice stack to associate CI/CD services 
 
 8. Push a change to source repository branch and check AWS Codepipeline console to verify pipeline exection- as well
 as Lambda>Alias>Versions to check if the new version was deployed.
@@ -179,15 +177,15 @@ Considerations when refactoring for separate features;
 
 
 ## Contents Description: 
-`Configure.py`: Prerequisite configuration script for launching CICD stack- 
-deploys resource bucket for subsequent Cloudformation Template launch. It accepts runtime inputs that are passed into 
+`Configure.py`: Prerequisite configuration script for launching CICD stack.
+Deploys resource bucket for subsequent Cloudformation Template launch. It accepts runtime inputs that are passed into 
 stack creation call as Parameters for cicd-template.yml.
 
 `api-services/template.yml`: SAM Template for deploying application services and 
 creates stack Output Parameters from the resulting launched service's ARNs for cicd-template.yml to import.
 Sets up the following:  
 * User S3 storage bucket, 
-* DynamoDBuser database table that application code will write to,
+* DynamoDB user database table that application code will write to,
 * Api Gateway Rest API integrated with Lambda as compute service & Alias to manage versions.
     This configuration is setup to forward API requests to Lambda Live Alias.
 
@@ -199,11 +197,10 @@ Stack constists of:
 * Codecommit or GitHub Connection(github connection required) as source repository 
 * Codebuild Project with a Linux container for running build commands
     commands on the ingested source artifacts(Dockerfile) and creating a temp Lambda Version
-* Lambda Test action LambdaAction1.py for creating and sending sample request through the temp lambda version to validate revision
-* Lambda Action LambdaAction2.py as last stage in pipeline for creating CodeDeploy Deployment on Group usinga  revision object. 
-    This works by updating the Alias Version # that the API is forwarding requests to.
-`sourcecode/aws_handler`: Core application code that parses request data and runs logic- This should be integrated
-into a Dockerfile if using lambda package type as Image and not code.zip 
+* Lambda Test action lambda-action1.py for creating and sending sample request through the temp lambda version to validate revision
+* Lambda Action lambda-action2.py as last stage in pipeline for creating CodeDeploy Deployment on Group using revision object. 
+    This works by updating the Alias Version # that the API is forwarding requests to and promoting it to main version.
+`sourcecode/aws_handler`: Core application code that parses request data and runs logic 
 
 
 

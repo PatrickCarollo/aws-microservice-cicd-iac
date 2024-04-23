@@ -1,0 +1,9 @@
+version = 0.1
+[default.deploy.parameters]
+stack_name = "microservicestackmaincore"
+resolve_s3 = true
+s3_prefix = "microservicestackmaincore"
+region = "us-east-1"
+capabilities = "CAPABILITY_IAM"
+parameter_overrides = "projectid=\"core\" initialimageuri=\"058264309078.dkr.ecr.us-east-1.amazonaws.com/myecrmaincore:latest\" sourcebranch=\"main\" computetype=\"arm64\""
+image_repositories = []

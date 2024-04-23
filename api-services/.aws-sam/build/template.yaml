@@ -1,4 +1,4 @@
-AWSTemplateFormatVersion: 2010-09-09
+AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
 Parameters:
   projectid:
@@ -10,6 +10,11 @@ Parameters:
     AllowedValues:
     - main
     - dev
+  computetype:
+    Type: String
+    AllowedValues:
+    - arm64
+    - x84
 Resources:
   ApplicationBucket:
     Type: AWS::S3::Bucket
@@ -62,7 +67,7 @@ Resources:
     Type: AWS::Serverless::Api
     Properties:
       Name:
-        Fn::Sub: MainApi${sourcebranch}${projectid}
+        Fn::Sub: microserviceapi${sourcebranch}${projectid}
       StageName: Live
       DefinitionBody:
         openapi: '3.0'
@@ -82,8 +87,10 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       FunctionName:
-        Fn::Sub: MainLambdaMS${sourcebranch}${projectid}
+        Fn::Sub: microservice-${sourcebranch}${projectid}
       PackageType: Image
+      Architectures:
+      - Ref: computetype
       ImageUri:
         Ref: initialimageuri
       Environment:
@@ -114,6 +121,10 @@ Resources:
       Policies:
       - Version: '2012-10-17'
         Statement:
+        - Effect: Allow
+          Action:
+          - sns:Publish
+          Resource: '*'
         - Effect: Allow
           Action:
           - dynamodb:PutItem
@@ -181,3 +192,9 @@ Outputs:
     Export:
       Name:
         Fn::Sub: ${AWS::StackName}-EcrUri
+  ComputeType:
+    Value:
+      Ref: computetype
+    Export:
+      Name:
+        Ref: computetype
