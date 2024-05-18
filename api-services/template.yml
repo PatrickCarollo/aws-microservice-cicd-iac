@@ -197,7 +197,3 @@ Outputs:
         Value: !Select [0, !Split [":", !Ref initialimageuri]]
         Export: 
             Name: !Sub '${AWS::StackName}-EcrUri'
-    ComputeType:
-        Value: !Ref computetype
-        Export: 
-            Name: !Ref computetype

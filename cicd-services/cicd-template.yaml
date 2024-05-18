@@ -1,3 +1,4 @@
+#TODO: move all importvalues to parameter
 #Complete simple CI/CD pipeline stack for Lambda
 AWSTemplateFormatVersion: 2010-09-09
 Parameters:
@@ -17,11 +18,11 @@ Parameters:
         AllowedValues: 
             - 'main'
             - 'dev'        
-    #TODO: fix parameter- from microservice stack, is trying to import compute type
     computetype:
         Type: String
-        Default: 
-            !Sub '${!ImportValue microservicestack${sourcebranch}${projectid}-ComputeType}'
+        AllowedValues: 
+            - 'arm'
+            - 'x86'  
 Conditions:
     GHrep: !Equals
         - !Ref repositoryprovider

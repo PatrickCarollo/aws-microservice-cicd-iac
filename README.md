@@ -1,6 +1,6 @@
 # Serverless Microservice + CI/CD Deployment
-Leveraging IaC tools on AWS for the setup of serverless microservice application that processes images 
-and string parameters delivered via Rest API supported by CI/CD pipeline.
+Leveraging IaC tools on AWS for the setup of a set of services that includes a serverless microservice Docker image Lambda,
+Rest API endpoint, and CI/CD pipeline.
 
 
 ## Brief Architectural Outline
@@ -165,14 +165,14 @@ isolate ci/cd pipelines as well as associate ci/cd services to their correspondi
 8. Push a change to source repository branch and check AWS Codepipeline console to verify pipeline exection- as well
 as Lambda>Alias>Versions to check if the new version was deployed.
 
-## Maintenance and Limitations 11/28/23:
-This infrastructure is intended to configure BASE infrastructure for- meaning only core functionality
-is included and is meant to be built ontop of, for example; setting up security on prod stack. 
-Considerations when refactoring for separate features; 
+## Maintenance and Limitations 05/17/24:
+This infrastructure is obviously only intended to configure BASE infrastructure for a simple application. It is meant to be built ontop of, for example; auth for the api endpoints, bucket policies, and fine-tuning rate limits on the lambda function all could be considerations that are not (yet) included in this project.
+Other considerations and refactoring notes; 
 1. S3 bucket and dynamodb database is currently being deployed in app stack. 
     This Resource(s) might be elected for removal if creating for example if deploying a list or get feature-
     These would need reworking or remove as well as references to these resources in ci/cd stack template.yml.
-2. lambda-action1 code- how it's test request is formed for specific mock request parameters. 
+2. lambda-action1 code- it's test request is formed for specific mock request parameters that should be changed. 
+3. Looking to refactor the services defined cicd-template.yml to be deployable without having the prerequisite microservices stack deployed. This would be to make the ci/cd portion of this repository usable as a standalone set of services for an already existing lambda function setup
 
 
 
@@ -200,7 +200,7 @@ Stack constists of:
 * Lambda Test action lambda-action1.py for creating and sending sample request through the temp lambda version to validate revision
 * Lambda Action lambda-action2.py as last stage in pipeline for creating CodeDeploy Deployment on Group using revision object. 
     This works by updating the Alias Version # that the API is forwarding requests to and promoting it to main version.
-`sourcecode/aws_handler`: Core application code that parses request data and runs logic 
+`sourcecode/aws_handler`: Sample core application code that parses request data and runs logic
 
 
 

@@ -10,12 +10,14 @@ s3client = boto3.client('s3')
 iamclient = boto3.client('iam')
 ssmclient = boto3.client('ssm')
 
+
 def Command():
     action = input('create/update: ')
     projectid = input('enter unique tag created for project identification: ').strip()
     repository_provider = input('Codecommit repository or existing GitHub?.. aws/github: ').strip()
     repository_name_path = input('enter <githubaccount/repositoryname> if github or <nameforcodecommitrepository> if aws: ').strip()
     source_branch = input('Choose branch to act as pipeline source.. dev/main: ').strip()
+    compute_type = input('Choose compute architecture arm/x86: ')
     if repository_name_path == 'aws':
         github_connection_arn = 'null'
     else:
@@ -27,8 +29,10 @@ def Command():
     command_data['repository_name_path'] = repository_name_path
     command_data['github_connection_arn'] = github_connection_arn
     command_data['source_branch'] = source_branch    
+    command_data['compute_type'] = compute_type
     command_data['resources_bucket_name'] = 'deploymentresources-' + command_data['source_branch'] + command_data['projectid']
     return command_data
+
 
 #runs list with expected bucket name to check if bucket exists
 def Check_Bucket_Resource(command_data):
@@ -43,6 +47,7 @@ def Check_Bucket_Resource(command_data):
         print('No resource bucket found, Creating new one..')
         return False
         
+
 #S3 bucket to store resources for CloudFormation to reference
 def Create_Bucket_Resource(command_data):   
     try:
@@ -53,6 +58,7 @@ def Create_Bucket_Resource(command_data):
     except ClientError as e:
         print("Client error: %s" % e)
         return command_data['resources_bucket_name']
+
 
 #Upload ci/cd pipeline stages' function code for test and deploy
 def Upload_Resources(command_data):
@@ -90,6 +96,7 @@ def Upload_Resources(command_data):
             print("Client error: %s" % e)
     return data
 
+
 #Conditionally updates or creates from ci/cd services 'template0' CF template
 def CreateUpdate_Stack(command_data, upload_status):
     if upload_status != False:
@@ -116,7 +123,11 @@ def CreateUpdate_Stack(command_data, upload_status):
             {   
                 'ParameterKey': 'sourcebranch',
                 'ParameterValue': command_data['source_branch'] 
-            }
+            },
+            {   
+                'ParameterKey': 'computetype',
+                'ParameterValue': command_data['compute_type'] 
+            }            
         ]
     Validate_Template(template_body)
     stack_roles = Get_RoleARN()
@@ -127,6 +138,7 @@ def CreateUpdate_Stack(command_data, upload_status):
         try:
             response = cfclient.update_stack(
                 StackName = name,
+                Capabilities = ['CAPABILITY_NAMED_IAM'],
                 TemplateBody = template_body,
                 RoleARN = stack_roles,
                 Parameters = params
