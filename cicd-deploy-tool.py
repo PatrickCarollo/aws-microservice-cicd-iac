@@ -97,9 +97,10 @@ def Upload_Resources(command_data):
     return data
 
 
+
 #Conditionally updates or creates from ci/cd services 'template0' CF template
-def CreateUpdate_Stack(command_data, upload_status):
-    if upload_status != False:
+def CreateUpdate_Stack(command_data, stack_roles):
+    if stack_roles != False:
         with open('app1/cicd-services/cicd-template.yaml') as temp:
             template_body = temp.read()
         name = 'CICDstack-'+ command_data['source_branch']+ command_data['projectid']
@@ -130,10 +131,7 @@ def CreateUpdate_Stack(command_data, upload_status):
             }            
         ]
     Validate_Template(template_body)
-    stack_roles = Get_RoleARN()
-    if stack_roles == 0:
-        print('Stopped stack launch process, no cicd stack role found')
-        return
+
     if command_data['action'] == 'update':
         try:
             response = cfclient.update_stack(
@@ -145,6 +143,7 @@ def CreateUpdate_Stack(command_data, upload_status):
             )
         except ClientError as e:
             print("Client error: %s" % e)
+            stackresponse = False
     elif command_data['action'] == 'create':
         try:
             response = cfclient.create_stack(
@@ -154,19 +153,15 @@ def CreateUpdate_Stack(command_data, upload_status):
                 RoleARN = stack_roles,
                 Parameters = params
             )
+            stackresponse = response['StackId']
         except ClientError as e:
             print("Client error: %s" % e)
+            stackresponse = False
     else:
         print('invalid action')
-    if 'StackId' in response:
-        print('Resources deployed')
-        stackresponse = response['StackId']
-    else:
-        print(response)
-        print('stack creation failed')
-        stackresponse = 0
     return stackresponse
         
+
 
 #Prints out validation result of local template0.yaml
 def Validate_Template(template_body):
@@ -180,6 +175,7 @@ def Validate_Template(template_body):
         print("Client error: %s" % e)      
 
 
+
 #Returns ARN of set IAM role name for CloudFormation template creation
 def Get_RoleARN():
     try:
@@ -190,7 +186,7 @@ def Get_RoleARN():
             data = response['Role']['Arn'].strip()
             print(data)
         else:
-            data = 0
+            data = False
             print('Error getting role for stack creation')
         return data
     except ClientError as e:
@@ -202,9 +198,11 @@ def main():
     if q['action'] == 'create':
         a = Check_Bucket_Resource(q)
         if a == False:
-            b = Create_Bucket_Resource(q)
-    c = Upload_Resources(q)
-    CreateUpdate_Stack(q, c)
+            Create_Bucket_Resource(q)
+        Upload_Resources(q)
+    z = Get_RoleARN()
+    if z != False:
+        CreateUpdate_Stack(q,z)
 
 if __name__ == '__main__':
     main()

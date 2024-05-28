@@ -114,14 +114,18 @@ Resources:
                                     - 'dev'
                         -   Name: 'projectid'
                             Type: PLAINTEXT
-                            Value: !Ref projectid           
+                            Value: !Ref projectid
                 ComputeType: BUILD_GENERAL1_SMALL
                 Image: 
                     !If
                         - InitialbuildARM
-                        - aws/codebuild/amazonlinux2-aarch64-standard:3.0
-                        - aws/codebuild/standard:5.0 
-                Type: LINUX_CONTAINER
+                        - aws/codebuild/amazonlinux2-aarch64-standard:2.0
+                        - aws/codebuild/standard:5.0
+                Type: 
+                    !If
+                        - InitialbuildARM
+                        - ARM_CONTAINER
+                        - LINUX_CONTAINER
                 PrivilegedMode: true
             Artifacts: 
                 Type: CODEPIPELINE
@@ -179,7 +183,7 @@ Resources:
                     codedeployapp: !Ref Application           
             Handler: lambda-action2.lambda_handler
             Role: !GetAtt Lambdaction2role.Arn
-            Runtime: python3.7
+            Runtime: python3.11
             Code:
                 S3Bucket: !Sub 'deploymentresources-${sourcebranch}${projectid}'
                 S3Key: 'cicd/lambda-action2.zip'
