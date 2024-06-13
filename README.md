@@ -2,9 +2,9 @@
 Infrastructure setup for AWS Lambda microservice API and Codepipeline CI/CD.
 
 
-## Brief Architectural Outline
+## Architectural Overview
 This project as-is, manages and deploys serverless application and infrastructure 
-with an included CI/CD process. It uses AWS Serverless to deploy initial core microservice such as; API Gateway endpoint and Lambda Proxy Integration, Lambda Function setup defining compute architecture and environment variables. As is, the project associates microservice resources to corresponding CI/CD resources using unique IDs in resource name that are passed to stack to Stack via Cloudformation Outputs and Importvalues.
+with an included CI/CD process. It uses AWS Serverless to deploy initial core microservice such as; API Gateway endpoint and Lambda Proxy Integration, Lambda Function setup defining compute architecture and environment variables. As is, the project associates microservice resources to corresponding CI/CD resources using unique IDs in resource name that are passed to stack to Stack via Cloudformation Outputs and ImportValues.
 A python script "cicd-deploy-tool.py" initiates setup of the CI/CD infrastructure; it fetches
 IAM roles for Stack creation, initiates S3 for storing source code of Codepipeline custom actions and defines the input parameters of the Stack. The CI/CD Infrastructure consists of Codepipeline and it's stages:
  Source Stage- The source of the pipeline where it will be detecting code changes. This can be conditionaly set to an existing
