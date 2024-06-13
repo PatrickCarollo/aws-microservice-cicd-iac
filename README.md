@@ -8,13 +8,13 @@ with an included CI/CD process. It uses AWS Serverless to deploy initial core mi
 A python script "cicd-deploy-tool.py" initiates setup of the CI/CD infrastructure; it fetches
 IAM roles for Stack creation, initiates S3 for storing source code of Codepipeline custom actions and defines the input parameters of the Stack. The CI/CD Infrastructure consists of Codepipeline and it's stages:
  Source Stage- The source of the pipeline where it will be detecting code changes. This can be conditionaly set to an existing
- github or codecommit
+ github or codecommit.
  Build Stage- Ingests the artifacts and revisioned code, builds out new Image, pushes to ECR and deploys to Lambda 
- Test Stage- A test, custom Lambda stage that, As is, sends a test Invocation to the revised Lambda Function and when recieves no Errors, Sends results back to Codepipeline
- Deploy Stage- Another custom Lambda stage. This promotes the revised Lambda to Live upon successful test. It does this the by setting the Alias number, which API-Gateway sends it's requests to, to the revised, tested version.
+ Test Stage- A test, custom Lambda stage that, As is, sends a test Invocation to the revised Lambda Function and when recieves no Errors, Sends a success result back to Codepipeline execution.
+ Deploy Stage- Another custom stage that promotes the revised Lambda to Live upon successful test. It does this the by updating the Alias number, which API-Gateway sends it's requests to, to the revised, tested version.
 
 ## Pre setup notes:
-+ you'll set `projectid` to a short string describing the microservice use
++ Set `projectid` to a short string describing the microservice use
 and `sourcebranch` to either `main` or `dev`. They're used to
 isolate ci/cd pipelines as well as associate ci/cd services to their corresponding target services
 + If using GitHub as code source provider:
@@ -55,7 +55,7 @@ isolate ci/cd pipelines as well as associate ci/cd services to their correspondi
     docker tag <imageid> <yourawsaccid>.dkr.ecr.<yourawsregion>.amazonaws.com/<yourECRname>:latest
     ```
     ```
-    docker push <yourawsacountid>.dkr.ecr.<yourawsregion>.amazonaws.com/<yourECRname:latest
+    docker push <yourawsacountid>.dkr.ecr.<yourawsregion>.amazonaws.com/<yourECRname>:latest
     ```
     
 5. Deploy microservice stack(from /api-services)

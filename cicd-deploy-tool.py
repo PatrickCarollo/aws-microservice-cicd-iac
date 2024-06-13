@@ -60,6 +60,7 @@ def Create_Bucket_Resource(command_data):
         return command_data['resources_bucket_name']
 
 
+
 #Upload ci/cd pipeline stages' function code for test and deploy
 def Upload_Resources(command_data):
     file1 = io.BytesIO()
@@ -175,7 +176,6 @@ def Validate_Template(template_body):
         print("Client error: %s" % e)      
 
 
-
 #Returns ARN of set IAM role name for CloudFormation template creation
 def Get_RoleARN():
     try:
@@ -192,6 +192,7 @@ def Get_RoleARN():
     except ClientError as e:
         print("Client error: %s" % e)
 
+        
         
 def main():
     q = Command()
