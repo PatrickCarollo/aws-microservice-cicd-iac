@@ -20,10 +20,8 @@ def lambda_handler(event, context):
 def Construct_Request_Body(projectid): 
     try:
         req_parameters = {
-            'body': "test",
-            'queryStringParameters': {
-                'test': 'test'
-            }    
+            'body': "mocktest",
+            'queryStringParameters': ''
         }
         json_test_request = json.dumps(req_parameters)
         print('request about to be sent through to lambda core service: '+ json_test_request)

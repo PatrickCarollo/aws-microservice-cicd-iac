@@ -14,7 +14,7 @@ IAM roles for Stack creation, initiates S3 for storing source code of Codepipeli
  Deploy Stage- Another custom stage that promotes the revised Lambda to Live upon successful test. It does this the by updating the Alias number, which API-Gateway sends it's requests to, to the revised, tested version.
 
 ## Pre setup notes:
-+ Set `projectid` to a short string describing the microservice use
++ `projectid` will be set to a short string describing the microservice use
 and `sourcebranch` to either `main` or `dev`. They're used to
 isolate ci/cd pipelines as well as associate ci/cd services to their corresponding target services
 + If using GitHub as code source provider:
@@ -23,15 +23,16 @@ isolate ci/cd pipelines as well as associate ci/cd services to their correspondi
     should exist before launching CI/CD stack
 
 ## Setup Instructions
-1. Copy directories from this repository to desired new microservice repository
+1. Copy directories from this repository to desired new source microservice repo
     ```
     cp -r aws-microservice-cicd-iac/cicd-services <yourreponame>/
     ```
     ```
     cp -r aws-microservice-cicd-iac/api-services <yourreponame>/
     ```
-    - Move <yourreponame>/cicd-services/buildspec.yaml to root of <yourreponame>
-    - Change location of lambda stages' code by modifying the root folder names found in Upload_Resources() to match your new repo
+    ```
+    cp aws-microservice-cicd-iac/cicd-services/buildspec.yml <yourreponame>
+    - If using a modified version of lambda custom action stages: Change location of the stagecode by modifying the location names found in Upload_Resources() to match your new repo
 
 2. Install/update SAM CLI 
     ```

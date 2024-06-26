@@ -102,7 +102,7 @@ def Upload_Resources(command_data):
 #Conditionally updates or creates from ci/cd services 'template0' CF template
 def CreateUpdate_Stack(command_data, stack_roles):
     if stack_roles != False:
-        with open('app1/cicd-services/cicd-template.yaml') as temp:
+        with open('app1/cicd-services/cicd-template.yml') as temp:
             template_body = temp.read()
         name = 'CICDstack-'+ command_data['source_branch']+ command_data['projectid']
         params = [ 

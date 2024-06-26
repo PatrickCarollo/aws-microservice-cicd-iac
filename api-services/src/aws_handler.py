@@ -1,3 +1,4 @@
+#Mock microservice flow
 import boto3
 import json
 import os
@@ -6,7 +7,7 @@ print('start')
 def lambda_handler(event, context):
     print(event)
     #Flow of mock request processing and testing
-    if 'test' not in event['body']:
+    if 'mocktest' not in event['body']:
         p = Parse_Data(event)
         if p != False:
             response_data = json.dumps(p)
@@ -41,15 +42,3 @@ def Parse_Data(event):
     except:
         return False
     
-
-
-#event = {
-#    'queryStringParameters': {
-#        'name': 'testname',
-#        'user': 'patrickcs',
-#        'upc': '1234682'
-#    },
-#    'body': 'imagebodyhere'
-#}
-#context = ''
-#lambda_handler(event, context)

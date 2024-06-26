@@ -1,4 +1,3 @@
-#TODO: move all importvalues to parameter
 #Complete simple CI/CD pipeline stack for Lambda
 AWSTemplateFormatVersion: 2010-09-09
 Parameters:

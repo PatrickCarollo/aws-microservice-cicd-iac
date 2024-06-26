@@ -23,7 +23,7 @@ def Describe_Version(app_data):
         response1 = lambdaclient.list_versions_by_function(
             FunctionName = app_data['AppName']
         )
-        #Used to return current version that the alias is mapped to
+        #Used to return current version alias is mapped to
         response2 = lambdaclient.get_function(
             FunctionName = app_data['AppName'],
             Qualifier = app_data['livealias']
