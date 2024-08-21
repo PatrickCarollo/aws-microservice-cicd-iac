@@ -77,6 +77,7 @@ aws iam put-role-policy --role-name MainCICDStackServiceRole --policy-name MainC
                 "codebuild:DeleteProject",
                 "codebuild:CreateProject",
                 "codebuild:BatchGetProjects",
+                "codebuild:UpdateProject",
                 "codedeploy:DeleteDeploymentConfig",
                 "codedeploy:GetDeploymentGroup",
                 "codedeploy:DeleteGitHubAccountToken",

@@ -1,4 +1,4 @@
-#Mock microservice flow
+#Mock microservice flow 
 import boto3
 import json
 import os
@@ -15,7 +15,7 @@ def lambda_handler(event, context):
             response_data = 'Failed to parse'
     else:
         response_data = 'Pipeline Action mock test invocation'
-    #Creating response format 
+    #Creating response format
     main_response_object = {
         'statusCode': 200,
         'headers': {

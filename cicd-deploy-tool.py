@@ -17,7 +17,8 @@ def Command():
     repository_provider = input('Codecommit repository or existing GitHub?.. aws/github: ').strip()
     repository_name_path = input('enter <githubaccount/repositoryname> if github or <nameforcodecommitrepository> if aws: ').strip()
     source_branch = input('Choose branch to act as pipeline source.. dev/main: ').strip()
-    compute_type = input('Choose compute architecture arm/x86: ')
+    compute_type = input('Choose compute architecture of Lambda arm/x86: ')
+    build_image_digest = input('Enter ECR build image digest: ')
     if repository_name_path == 'aws':
         github_connection_arn = 'null'
     else:
@@ -31,78 +32,16 @@ def Command():
     command_data['source_branch'] = source_branch    
     command_data['compute_type'] = compute_type
     command_data['resources_bucket_name'] = 'deploymentresources-' + command_data['source_branch'] + command_data['projectid']
+    command_data['build_image_digest'] = build_image_digest
     return command_data
-
-
-#runs list with expected bucket name to check if bucket exists
-def Check_Bucket_Resource(command_data):
-    try:
-        response = s3client.list_objects(
-            Bucket = command_data['resources_bucket_name'],
-            )    
-        print(command_data['resources_bucket_name']+ ' already found')
-        return command_data['resources_bucket_name']
-
-    except: 
-        print('No resource bucket found, Creating new one..')
-        return False
-        
-
-#S3 bucket to store resources for CloudFormation to reference
-def Create_Bucket_Resource(command_data):   
-    try:
-        response = s3client.create_bucket(
-            Bucket = command_data['resources_bucket_name']
-        )
-        print('Resources bucket launched: '+ command_data['resources_bucket_name'] )
-    except ClientError as e:
-        print("Client error: %s" % e)
-        return command_data['resources_bucket_name']
-
-
-
-#Upload ci/cd pipeline stages' function code for test and deploy
-def Upload_Resources(command_data):
-    file1 = io.BytesIO()
-    with ZipFile(file1,'w',ZIP_DEFLATED) as obj:
-        obj.write('app1/cicd-services/lambda-action1.py', arcname = 'lambda-action1.py')
-    file1.seek(0)
-    file2 = io.BytesIO()
-    with ZipFile(file2,'w',ZIP_DEFLATED) as obj:
-        obj.write('app1/cicd-services/lambda-action2.py', arcname = 'lambda-action2.py')
-    file2.seek(0)
-    objects = [
-        {    
-            'body': file1,
-            'key': 'cicd/lambda-action1.zip'
-        },
-        {    
-            'body': file2,
-            'key': 'cicd/lambda-action2.zip'
-        }    
-    ]
-    for x in objects:    
-        try:
-            response = s3client.put_object(
-                Body = x['body'],                        
-                Bucket = command_data['resources_bucket_name'],
-                Key = x['key']
-            )
-            if 'ETag' in response: 
-                data = response['ETag']
-                print('stored object successfuly: '+ x['key'])
-            else: 
-                data = 0
-        except ClientError as e:
-            print("Client error: %s" % e)
-    return data
 
 
 
 #Conditionally updates or creates from ci/cd services 'template0' CF template
 def CreateUpdate_Stack(command_data, stack_roles):
+    repo_name = command_data['repository_name_path'].split('/')[1]
     if stack_roles != False:
-        with open('app1/cicd-services/cicd-template.yml') as temp:
+        with open(repo_name+'/cicd-services/cicd-template.yml') as temp:
             template_body = temp.read()
         name = 'CICDstack-'+ command_data['source_branch']+ command_data['projectid']
         params = [ 
@@ -129,10 +68,13 @@ def CreateUpdate_Stack(command_data, stack_roles):
             {   
                 'ParameterKey': 'computetype',
                 'ParameterValue': command_data['compute_type'] 
-            }            
+            },
+            {   
+                'ParameterKey': 'buildimagedigest',
+                'ParameterValue': command_data['build_image_digest'] 
+            }           
         ]
     Validate_Template(template_body)
-
     if command_data['action'] == 'update':
         try:
             response = cfclient.update_stack(
@@ -142,6 +84,8 @@ def CreateUpdate_Stack(command_data, stack_roles):
                 RoleARN = stack_roles,
                 Parameters = params
             )
+            stackresponse = response['StackId']
+            print('Updated stack')
         except ClientError as e:
             print("Client error: %s" % e)
             stackresponse = False
@@ -155,6 +99,7 @@ def CreateUpdate_Stack(command_data, stack_roles):
                 Parameters = params
             )
             stackresponse = response['StackId']
+            print('Launched stack')
         except ClientError as e:
             print("Client error: %s" % e)
             stackresponse = False
@@ -196,11 +141,6 @@ def Get_RoleARN():
         
 def main():
     q = Command()
-    if q['action'] == 'create':
-        a = Check_Bucket_Resource(q)
-        if a == False:
-            Create_Bucket_Resource(q)
-        Upload_Resources(q)
     z = Get_RoleARN()
     if z != False:
         CreateUpdate_Stack(q,z)
