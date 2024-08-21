@@ -22,6 +22,7 @@ phases:
           docker-build.sh
           update-lambda-uri.sh
           TEST_RESULT=$(test-request.py)
+          echo "$TEST_RESULT"
           promote-to-live.py $TEST_RESULT
         else
           ###BUILDER AMI CODE REVISION BLOCK

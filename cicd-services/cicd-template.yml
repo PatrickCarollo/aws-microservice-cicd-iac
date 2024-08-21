@@ -133,9 +133,9 @@ Resources:
                             Value: !Ref Application
                 ComputeType: BUILD_GENERAL1_SMALL
                 Image: !Join
-                    - '/'
+                    - ''
                     -   - Fn::ImportValue: !Sub 'microservicestack${sourcebranch}${projectid}-EcrUri'
-                        - /
+                        - '@'
                         - !Ref buildimagedigest
                 Type: 
                     !If
@@ -296,8 +296,12 @@ Resources:
                                     - 'lambda:InvokeFunction'
                                     - 'lambda:GetFunctionConfiguration'
                                 Resource: 
-                                    - Fn::ImportValue: !Sub 'microservicestack${sourcebranch}${projectid}-AppArn' 
-                                    - Fn::ImportValue: !Sub 'microservicestack${sourcebranch}${projectid}-AliasArn'
+                                    - Fn::ImportValue: !Sub 'microservicestack${sourcebranch}${projectid}-AppArn'
+                                    - !Join
+                                        - ''
+                                        -   - Fn::ImportValue: !Sub 'microservicestack${sourcebranch}${projectid}-AppArn'
+                                            - ':*'
+                                    
                             -   Effect: Allow
                                 Action: 
                                     - 's3:GetObject'
@@ -308,7 +312,9 @@ Resources:
                                         - !Sub 'arn:aws:s3:::deploymentresources-${sourcebranch}${projectid}/msdeploy${sourcebranch}${projectid}/Codecommit/*'                                
                                         - !Sub 'arn:aws:s3:::deploymentresources-${sourcebranch}${projectid}/msdeploy${sourcebranch}${projectid}/GithubOutp/*'
                             -   Effect: Allow
-                                Action: 'ecr:GetAuthorizationToken'
+                                Action: 
+                                    - 'ecr:GetAuthorizationToken'
+                                    - 'ecr:BatchGetImage'
                                 Resource: '*'            
                             -   Effect: Allow
                                 Action: 
