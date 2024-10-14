@@ -13,9 +13,9 @@ ssmclient = boto3.client('ssm')
 
 def Command():
     action = input('create/update: ')
-    projectid = input('enter unique tag created for project identification: ').strip()
+    projectid = input('Enter unique tag created for project identification: ').strip()
     repository_provider = input('Codecommit repository or existing GitHub?.. aws/github: ').strip()
-    repository_name_path = input('enter <githubaccount/repositoryname> if github or <nameforcodecommitrepository> if aws: ').strip()
+    repository_name_path = input('Enter <githubaccount/repositoryname> if github or <nameforcodecommitrepository> if aws: ').strip()
     source_branch = input('Choose branch to act as pipeline source.. dev/main: ').strip()
     compute_type = input('Choose compute architecture of Lambda arm/x86: ')
     build_image_digest = input('Enter ECR build image digest: ')

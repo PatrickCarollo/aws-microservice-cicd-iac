@@ -13,13 +13,50 @@ print('EXECUTING SCRIPT: promote-to-live.py')
 
 def handler():
     env_variables = os.environ
-    test_result = sys.argv[1]
+    test_result = sys.argv[1].strip()
     if  test_result != 'FAIL':
+        Wipe_Old_Versions(env_variables)
         a = Describe_Version(env_variables, test_result)
         if a != False:
             Create_Deployment(env_variables,a)
     else:
         print('stopped')
+
+
+
+def Wipe_Old_Versions(env_vars):
+    print('checking for deprecated versions of main lambda to delete')
+    try:
+
+        response = lambdaclient.list_versions_by_function(
+            FunctionName = env_vars['LambdaName'],
+            MaxItems = 49
+        )
+        versions = []
+        for x in response['Versions']:
+            if x['Version'] != '$LATEST':
+                versions.append(x['Version'])
+            else:
+                pass
+        if len(versions) > 30:
+            print('reached threshold.. rming old versions')
+            versions = [int(x) for x in versions]
+            versions.sort()
+            # Remove the last two elements (the highest two numbers)
+            versions = versions[:-5]
+            #convert back to str
+            versions = [str(x) for x in versions]
+            for x in versions:
+                response = lambdaclient.delete_function(
+                    FunctionName = env_vars['LambdaName'],
+                    Qualifier = x
+                )
+        else:
+            print('threshold not reached')
+            return
+    except ClientError as e:
+        print('Client error: %s' % e)
+
 
 
 #Used to return current version alias is mapped to and accesses the temp tested version from env 

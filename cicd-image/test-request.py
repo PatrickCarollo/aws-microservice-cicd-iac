@@ -8,7 +8,7 @@ from botocore.exceptions import ClientError
 lambdaclient = boto3.client('lambda')
 pipelineclient = boto3.client('codepipeline')
 s3client = boto3.client('s3')
-print('EXECUTING SCRIPT: test-request.py')
+#print('EXECUTING SCRIPT: test-request.py')
 
 
 #Isolated handler for clarity
@@ -20,11 +20,11 @@ def handler():
     c = Invoke_Temp_Version(a,b,env_variables)
     if c != False:
         result = b
-        print('Done test flow')
+        print(b)
     else:
         result = 'FAIL'
-    print('Finished Temp invoke lambda function')
     return result
+
 
 #Request body for test request directly to the Lambda
 def Construct_Request_Body(temp_version,env_variables): 
@@ -73,6 +73,8 @@ def Get_Version(env_variables):
             FunctionName = env_variables['LambdaName']
         )
         temp_version = response['Versions'][-1]['Version']
+        print('temp lamba version(most recent main version):')
+        print(temp_version)
     except ClientError as e:
         print("Client error: %s" % e)
         temp_version = False

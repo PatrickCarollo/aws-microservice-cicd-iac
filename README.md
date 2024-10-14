@@ -4,20 +4,20 @@ Infrastructure setup for AWS Lambda microservice API and Codepipeline CI/CD.
 
 ## Architectural Overview
 This project as-is, manages and deploys a serverless application and associated services 
-with an included CI/CD process. It uses AWS Serverless to deploy initial core microservice such as; API Gateway endpoint w/ Lambda Proxy Integration. A python script "cicd-deploy-tool.py" initiates setup of the CI/CD infrastructure. There are two CI/CD flows- one for Lambda as well as for a global custom Build Image. Which flow is run is decided by parsing the Git commit message. 
-The scripts flow for automating Lambda deployment;
-docker-build.sh: Building and pushing a new Docker image from revision(this can be both Lambda Image or Build Image)>
+with an included CI/CD process. It uses AWS Serverless to deploy initial core microservice such as; API Gateway endpoint w/ Lambda Proxy Integration. A locally run python script "cicd-deploy-tool.py" initiates setup of the CI/CD infrastructure. The deployment process is executed and managed as a Codepipeline/ Codebuild Project running a custom Image. There are two CI/CD flows- one for Lambda as well as for a global custom Build Image. Which flow is run is decided by parsing the Git commit message. 
+The Build Image built-in scripts flow for automating Lambda deployment;
+docker-build.sh: Building and pushing a new Docker image from revision(this can be both Lambda app Image or Build Image)>
 update-lambda-uri.sh: Creates a 'temp' version on Core Lambda Function
 test-requst.py: Sends a mock event directly to the newest Core Lambda version>
 promote-to-live.py: Promotes the revised Lambda to Live upon successful test. It does this the by updating the Alias number, which API Gateway forwards requests to, to the revised, tested version.
-The scripts flow for automating Build Image updates:
+The scripts flow for automating Build Image updates;
 docker-build.sh>
 update-build-ami.py: Updates the Image URI that Codebuild is using as Project Image
 
 
 
 ## Pre setup notes:
-+ `projectid` will be set to a short string describing the microservice use
++ `projectid` is intended to be set as a short string describing the microservice use
 and `sourcebranch` to either `main` or `dev`. They're used to
 isolate ci/cd pipelines as well as associate ci/cd services to their corresponding target services
 + If using GitHub as code source provider:
@@ -25,12 +25,13 @@ isolate ci/cd pipelines as well as associate ci/cd services to their correspondi
 + Per each microservice- An existing Repository with Git branch named `dev` or `main` 
     should exist before launching CI/CD stack
 + The first repository registered for this project is designed to act as the source of the global build image
++ Consider adding environment variables for application in api-services/src/template.yml
 ## Setup Instructions
 1. Copy directories from this repository to desired new source microservice repo
     ```
     cp -r aws-microservice-cicd-iac/cicd-image <yourreponame>
     ```
-    *Only copy ^^this^^ folder if this is the first repo registered- acts as source for build image
+    *Only copy ^^this^^ folder if this is the first repo registered- acts as global source for shared build image
     cp -r aws-microservice-cicd-iac/cicd-services <yourreponame>
     ```
     ```
@@ -47,7 +48,7 @@ isolate ci/cd pipelines as well as associate ci/cd services to their correspondi
 3. Create a private ECR in AWS console. 
 
 4. Sign into docker using aws auth, build desired initial starting docker image, push
-   *Skip build cmd if you already have a local Image(launching for development stack)- but you must specify a ECR URI. This establishes respective variables
+   *Skip Docker build commands if you already have a local Image(launching for development stack)- but you must specify a ECR URI. This establishes respective variables
     ```
     cd <yourreponame>/api-services/src
     ```
@@ -172,7 +173,7 @@ isolate ci/cd pipelines as well as associate ci/cd services to their correspondi
  and Lambda>Alias>Versions to check if the new version was deployed and promoted.
 
 ## Maintenance and Limitations 05/28/24:
-This infrastructure is obviously only intended to configure BASE infrastructure for a simple application. It is meant to be built ontop of, for example; auth for the api endpoints, bucket policies, and fine-tuning rate limits on the lambda function all could be considerations that are not (yet) included in this project.
+This infrastructure is obviously only intended to configure BASE infrastructure for a simple application. It is meant to be built ontop of, for example; auth for the api endpoints, rate limits, bucket policies, including environment vars could be considerations that are not included in this project.
 Other considerations and refactoring notes; 
 1. S3 bucket and dynamodb database is currently being deployed in app stack. 
     This Resource(s) might be elected for removal if creating for example if deploying a list or get feature-

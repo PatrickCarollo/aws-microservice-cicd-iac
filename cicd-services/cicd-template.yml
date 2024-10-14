@@ -282,11 +282,10 @@ Resources:
                                 Action: 'logs:*'
                                 Resource: !Sub "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/codebuild/*"
                             -   Effect: Allow
-                                Action: '*'
+                                Action: 'ecr:*'
                                 Resource: 
                                     !Sub 
-                                        - 'arn:aws:ecr:${AWS::Region}:${AWS::AccountId}:repository/${EcrName}'
-                                        #extracting ECR name from initial ECR uri
+                                        - 'arn:aws:ecr:${AWS::Region}:${AWS::AccountId}:repository/${EcrName}*'
                                         - EcrName: !Select [1, !Split ["/", Fn::ImportValue: !Sub 'microservicestack${sourcebranch}${projectid}-EcrUri']]                           
                             -   Effect: Allow
                                 Action: 

@@ -21,9 +21,9 @@ phases:
           export BUILD_LOCATION="api-services/src"
           docker-build.sh
           update-lambda-uri.sh
-          TEST_RESULT=$(test-request.py)
-          echo "$TEST_RESULT"
-          promote-to-live.py $TEST_RESULT
+          TEST=$({ test-request.py; } | tail -n 1 >&1)
+          export TEST_RESULT="$TEST"
+          promote-to-live.py "$TEST_RESULT"
         else
           ###BUILDER AMI CODE REVISION BLOCK
           echo "Starting cicd builder AMI update flow..."
