@@ -6,7 +6,7 @@ Infrastructure setup for AWS Lambda microservice API and Codepipeline CI/CD.
 This project as-is, manages and deploys a serverless application and associated core services 
 with an included CI/CD process. It uses AWS Serverless Application Model(SAM) to deploy initial microservapp services  such as; API Gateway endpoint w/ Lambda Proxy Integration. A locally run python script "cicd-deploy-tool.py" initiates setup of the CI/CD infrastructure. The deployment process is executed and managed as a Codepipeline/ Codebuild Project running a custom Image. There are two CI/CD processes supported- one for Lambda as well as for a global custom Build Image. Which flow is run is dictated by parsing the GIT Commit message.
 
-##Features
+## Features
 - All core services for a working API endpoint and simple application
     - Configs for services S3, DynamoDB, API Gateway and Lambda(and all the necessary IAM Service Roles)
 - Full CI/CD process for a Docker Image Lambda 
