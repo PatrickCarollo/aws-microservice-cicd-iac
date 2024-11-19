@@ -3,18 +3,25 @@ Infrastructure setup for AWS Lambda microservice API and Codepipeline CI/CD.
 
 
 ## Architectural Overview
-This project as-is, manages and deploys a serverless application and associated services 
-with an included CI/CD process. It uses AWS Serverless to deploy initial core microservice such as; API Gateway endpoint w/ Lambda Proxy Integration. A locally run python script "cicd-deploy-tool.py" initiates setup of the CI/CD infrastructure. The deployment process is executed and managed as a Codepipeline/ Codebuild Project running a custom Image. There are two CI/CD flows- one for Lambda as well as for a global custom Build Image. Which flow is run is decided by parsing the Git commit message. 
-The Build Image built-in scripts flow for automating Lambda deployment;
-docker-build.sh: Building and pushing a new Docker image from revision(this can be both Lambda app Image or Build Image)>
-update-lambda-uri.sh: Creates a 'temp' version on Core Lambda Function
-test-requst.py: Sends a mock event directly to the newest Core Lambda version>
-promote-to-live.py: Promotes the revised Lambda to Live upon successful test. It does this the by updating the Alias number, which API Gateway forwards requests to, to the revised, tested version.
-The scripts flow for automating Build Image updates;
-docker-build.sh>
-update-build-ami.py: Updates the Image URI that Codebuild is using as Project Image
+This project as-is, manages and deploys a serverless application and associated core services 
+with an included CI/CD process. It uses AWS Serverless Application Model(SAM) to deploy initial microservapp services  such as; API Gateway endpoint w/ Lambda Proxy Integration. A locally run python script "cicd-deploy-tool.py" initiates setup of the CI/CD infrastructure. The deployment process is executed and managed as a Codepipeline/ Codebuild Project running a custom Image. There are two CI/CD processes supported- one for Lambda as well as for a global custom Build Image. Which flow is run is dictated by parsing the GIT Commit message.
 
-
+##Features
+- All core services for a working API endpoint and simple application
+    - Configs for services S3, DynamoDB, API Gateway and Lambda(and all the necessary IAM Service Roles)
+- Full CI/CD process for a Docker Image Lambda 
+    - Process is packaged as a Codebuild Custom AMI and contains python and Bash scripts for; building out a new Docker Image, Uploading to ECR, creating new Lambda version, running a test script and upon success promote the version to live.
+- Single point CI/CD Services deployment
+    - Configure.py acts as a deployment script for deploying and managing the IaC Cloudformation Stacks that define the
+    Codepipeline and underlying configurations
+- Isolated services
+    - This system when deployed configures a single Lambda application and respective CI/CD pipeline. But it has the capability to be deployed for several features or apps and each would be isolated. You would just run the deployment setup process again but with different projectid value
+- Global Build and Deploy AMI
+    - Uses a single Codebuild Custom Image designed to be shared across all associated projects.
+    This simplifies the need to custom remake build and deployment scripts for every new feature and add to every repository. It accomplishes this by referencing the Codebuild Custom Image Uri(your ECR).
+- CI/CD process for the Custom AMI
+    - The code for the AMI is hosted in the first repository registered and this repository's pipline will have the capability to efficientlyroll out changes to the global custom Image.
+    The Build and Deploy Container itself parses out the commit message and if it is 'builder update' it builds and deploys out from the Codebuild Dockerfile then updates all of the Codebuild projects URI to use this new image.
 
 ## Pre setup notes:
 + `projectid` is intended to be set as a short string describing the microservice use
@@ -31,7 +38,7 @@ isolate ci/cd pipelines as well as associate ci/cd services to their correspondi
     ```
     cp -r aws-microservice-cicd-iac/cicd-image <yourreponame>
     ```
-    *Only copy ^^this^^ folder if this is the first repo registered- acts as global source for shared build image
+    *Only copy ^^cicd-image^^ folder if this is the first repo registered- acts as global source for shared build image
     cp -r aws-microservice-cicd-iac/cicd-services <yourreponame>
     ```
     ```
@@ -56,15 +63,15 @@ isolate ci/cd pipelines as well as associate ci/cd services to their correspondi
     docker build -t <yourECRname> .
     ```
     ```
-    aws ecr get-login-password --region <yourawsregion> | docker login --username AWS --password-stdin <yourawsaccountid>.dkr.ecr.<yourawsregion>.amazonaws.com
+    aws ecr get-login-password --region <yourawsregion> | docker login --username AWS --password-stdin <ecr uri>
     ``` 
     ```
-    docker tag <imageid> <yourawsaccid>.dkr.ecr.<yourawsregion>.amazonaws.com/<yourECRname>:latest
+    docker tag <imageid> <ecr uri>:latest
     ```
     ```
-    docker push <yourawsacountid>.dkr.ecr.<yourawsregion>.amazonaws.com/<yourECRname>:latest
+    docker push <ecr uri>:latest
     ```
-    * Do the same for the build image if first repo
+    * Repeat for the build image if first repo
     
 5. Deploy microservice stack(from /api-services)
     ```
