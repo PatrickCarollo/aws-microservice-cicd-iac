@@ -39,6 +39,7 @@ isolate ci/cd pipelines as well as associate ci/cd services to their correspondi
     cp -r aws-microservice-cicd-iac/cicd-image <yourreponame>
     ```
     *Only copy ^^cicd-image^^ folder if this is the first repo registered- acts as global source for shared build image
+    ```
     cp -r aws-microservice-cicd-iac/cicd-services <yourreponame>
     ```
     ```
@@ -46,7 +47,7 @@ isolate ci/cd pipelines as well as associate ci/cd services to their correspondi
     ```
     ```
     cp aws-microservice-cicd-iac/buildspec.yml <yourreponame>
-
+    ```
 2. Install/update SAM CLI 
     ```
     install sam cli
