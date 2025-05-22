@@ -79,7 +79,6 @@ def main():
 	env_variables = os.environ
 	global new_build_ami_uri
 	new_build_ami_uri = env_variables['NEW_IMAGE_URI']
-	#new_build_ami_uri = '058264309078.dkr.ecr.us-east-1.amazonaws.com/myecrmaincore:grow'
 	a = Get_Project_Names()
 	for x in a:
 		b = Get_Project_Config(x)
@@ -89,95 +88,3 @@ def main():
 
 if __name__ == '__main__':
 	main()  
-'''
-{
-  "projects": [
-	{
-	  "name": "Deploymentbuildmaincore",
-	  "arn": "arn:aws:codebuild:us-east-1:058264309078:project/Deploymentbuildmaincore",
-	  "source": {
-		"type": "CODEPIPELINE",
-		"insecureSsl": false
-	  },
-	  "artifacts": {
-		"type": "CODEPIPELINE",
-		"name": "Deploymentbuildmaincore",
-		"packaging": "NONE",
-		"encryptionDisabled": false
-	  },
-	  "cache": {
-		"type": "LOCAL",
-		"modes": [
-		  "LOCAL_DOCKER_LAYER_CACHE"
-		]
-	  },
-	  "environment": {
-		"type": "ARM_CONTAINER",
-		"image": "aws/codebuild/amazonlinux2-aarch64-standard:2.0",
-		"computeType": "BUILD_GENERAL1_SMALL",
-		"environmentVariables": [
-		  {
-			"name": "Ecr",
-			"value": "058264309078.dkr.ecr.us-east-1.amazonaws.com",
-			"type": "PLAINTEXT"
-		  },
-		  {
-			"name": "EcrRepoName",
-			"value": "myecrmaincore",
-			"type": "PLAINTEXT"
-		  },
-		  {
-			"name": "Branch",
-			"value": "main",
-			"type": "PLAINTEXT"
-		  },
-		  {
-			"name": "projectid",
-			"value": "core",
-			"type": "PLAINTEXT"
-		  }
-		],
-		"privilegedMode": true,
-		"imagePullCredentialsType": "CODEBUILD"
-	  },
-	  "serviceRole": "arn:aws:iam::058264309078:role/buildpermissionsmaincore",
-	  "timeoutInMinutes": 60,
-	  "queuedTimeoutInMinutes": 480,
-	  "encryptionKey": "arn:aws:kms:us-east-1:058264309078:alias/aws/s3",
-	  "tags": [
-		{
-		  "key": "aws:cloudformation:stack-id",
-		  "value": "arn:aws:cloudformation:us-east-1:058264309078:stack/CICDstack-maincore/1b6a5040-2858-11ef-ba69-12f26b876d2d"
-		},
-		{
-		  "key": "aws:cloudformation:stack-name",
-		  "value": "CICDstack-maincore"
-		},
-		{
-		  "key": "aws:cloudformation:logical-id",
-		  "value": "Buildstage"
-		}
-	  ],
-	  "created": "2024-06-11T21:07:45.368Z",
-	  "lastModified": "2024-06-11T21:07:45.368Z",
-	  "badge": {
-		"badgeEnabled": false
-	  },
-	  "projectVisibility": "PRIVATE"
-	}
-  ],
-  "projectsNotFound": [],
-  "ResponseMetadata": {
-	"RequestId": "1ebebad6-16af-4ef1-a483-e95ba3dc4d31",
-	"HTTPStatusCode": 200,
-	"HTTPHeaders": {
-	  "x-amzn-requestid": "1ebebad6-16af-4ef1-a483-e95ba3dc4d31",
-	  "content-type": "application/x-amz-json-1.1",
-	  "content-length": "1468",
-	  "date": "Wed, 10 Jul 2024 17:59:59 GMT"
-	},
-	"RetryAttempts": 0
-  }
-}
-
-'''

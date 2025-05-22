@@ -3,8 +3,7 @@ Infrastructure setup for AWS Lambda microservice API and Codepipeline CI/CD.
 
 
 ## Architectural Overview
-This project as-is, manages and deploys a serverless application and associated core services 
-with an included CI/CD process. It uses AWS Serverless Application Model(SAM) to deploy initial microservapp services  such as; API Gateway endpoint w/ Lambda Proxy Integration. A locally run python script "cicd-deploy-tool.py" initiates setup of the CI/CD infrastructure. The deployment process is executed and managed as a Codepipeline/ Codebuild Project running a custom Image. There are two CI/CD processes supported- one for Lambda as well as for a global custom Build Image. Which flow is run is dictated by parsing the GIT Commit message.
+This project delivers a comprehensive serverless microservice framework that combines AWS Lambda applications with fully automated CI/CD pipelines. The architecture solves the common challenge of deploying and managing multiple microservices consistently and maintains security standards and operational efficiency. It uses AWS Serverless Application Model(SAM) to deploy initial services such as; API Gateway endpoint w/ Lambda Proxy Integration. It includes a centralized locally run python script "cicd-deploy-tool.py" that deploys and manages the CI/CD infrastructure. The deployment process is executed and managed as a Codepipeline/ Codebuild Project running a custom Image. There are two CI/CD processes includes- one for Lambda as well as for a global custom Build Image. Which flow is run is dictated by parsing the GIT Commit message.
 
 ## Features
 - All core services for a working API endpoint and simple application
@@ -20,7 +19,7 @@ with an included CI/CD process. It uses AWS Serverless Application Model(SAM) to
     - Uses a single Codebuild Custom Image designed to be shared across all associated projects.
     This simplifies the need to custom remake build and deployment scripts for every new feature and add to every repository. It accomplishes this by referencing the Codebuild Custom Image Uri(your ECR).
 - CI/CD process for the Custom AMI
-    - The code for the AMI is hosted in the first repository registered and this repository's pipline will have the capability to efficientlyroll out changes to the global custom Image.
+    - The code for the AMI is hosted in the first repository registered and this repository's pipline will have the capability to efficiently roll out changes to the global custom Image.
     The Build and Deploy Container itself parses out the commit message and if it is 'builder update' it builds and deploys out from the Codebuild Dockerfile then updates all of the Codebuild projects URI to use this new image.
 
 ## Pre setup notes:
@@ -142,6 +141,11 @@ isolate ci/cd pipelines as well as associate ci/cd services to their correspondi
                     "events:DescribeRule",
                     "events:PutTargets",
                     "events:RemoveTargets",
+                    "ecr:DescribeImages",
+                    "ecr:ListImages",
+                    "ecr:BatchGetImage",
+                    "ecr:DescribeRegistry",
+                    "ecr:DescribeRepositories"
                     "s3:CreateBucket",
                     "s3:PutObject",
                     "s3:GetObject",
@@ -181,7 +185,7 @@ isolate ci/cd pipelines as well as associate ci/cd services to their correspondi
  and Lambda>Alias>Versions to check if the new version was deployed and promoted.
 
 ## Maintenance and Limitations 05/28/24:
-This infrastructure is obviously only intended to configure BASE infrastructure for a simple application. It is meant to be built ontop of, for example; auth for the api endpoints, rate limits, bucket policies, including environment vars could be considerations that are not included in this project.
+This system is only intended to configure BASE infrastructure for a simple serverless application. It is meant to be built ontop of, for example; auth for the api endpoints, rate limits, bucket policies, could be considerations that are not addressed in the current configuration.
 Other considerations and refactoring notes; 
 1. S3 bucket and dynamodb database is currently being deployed in app stack. 
     This Resource(s) might be elected for removal if creating for example if deploying a list or get feature-

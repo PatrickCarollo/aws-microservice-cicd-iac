@@ -31,12 +31,37 @@ def Command():
     command_data['github_connection_arn'] = github_connection_arn
     command_data['source_branch'] = source_branch    
     command_data['compute_type'] = compute_type
-    command_data['resources_bucket_name'] = 'deploymentresources-' + command_data['source_branch'] + command_data['projectid']
     command_data['build_image_digest'] = build_image_digest
     return command_data
 
 
+#runs list with expected bucket name to check if bucket exists
+def Check_Bucket_Resource(bkt_name):
+    print('checking if an associated pipeline artifact bucket exists..')
+    try:
+        response = s3client.list_objects(
+            Bucket = bkt_name,
+            )    
+        print(bkt_name+ ' already found')
+        return True
+    except: 
+        print('No artifact bucket found, Creating new one..')
+        return False
 
+#S3 bucket to serve as artifact storage for respective pipeline
+def Create_Bucket_Resource(command_data):   
+    bkt_name = 'deploymentresources-' + command_data['source_branch'] + command_data['projectid']
+    bkt_status = Check_Bucket_Resource(bkt_name)
+    if bkt_status == False:
+        try:
+            response = s3client.create_bucket(
+                Bucket = bkt_name
+            )
+            print('New associated pipeline artifact bucket launched: '+ bkt_name )
+        except ClientError as e:
+            print("Client error: %s" % e)
+            return bkt_name
+        
 #Conditionally updates or creates from ci/cd services 'template0' CF template
 def CreateUpdate_Stack(command_data, stack_roles):
     repo_name = command_data['repository_name_path'].split('/')[1]
@@ -107,8 +132,6 @@ def CreateUpdate_Stack(command_data, stack_roles):
         print('invalid action')
     return stackresponse
         
-
-
 #Prints out validation result of local template0.yaml
 def Validate_Template(template_body):
     try:
@@ -120,8 +143,7 @@ def Validate_Template(template_body):
     except ClientError as e:
         print("Client error: %s" % e)      
 
-
-#Returns ARN of set IAM role name for CloudFormation template creation
+#Returns IAM Role ARN for CloudFormation to assume 
 def Get_RoleARN():
     try:
         response = iamclient.get_role(
@@ -138,9 +160,9 @@ def Get_RoleARN():
         print("Client error: %s" % e)
 
         
-        
 def main():
     q = Command()
+    Create_Bucket_Resource(q)
     z = Get_RoleARN()
     if z != False:
         CreateUpdate_Stack(q,z)

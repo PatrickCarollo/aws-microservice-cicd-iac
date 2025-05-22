@@ -3,7 +3,7 @@ FROM docker:20.10-dind
 
 #System dependencies install
 RUN apk add --no-cache \
-    python3 \
+    python3 \1
     py3-pip \
     git \
     bash \

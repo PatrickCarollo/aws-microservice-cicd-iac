@@ -132,6 +132,7 @@ Resources:
                             Type: PLAINTEXT
                             Value: !Ref Application
                 ComputeType: BUILD_GENERAL1_SMALL
+                ImagePullCredentialsType: SERVICE_ROLE
                 Image: !Join
                     - ''
                     -   - Fn::ImportValue: !Sub 'microservicestack${sourcebranch}${projectid}-EcrUri'
@@ -282,7 +283,9 @@ Resources:
                                 Action: 'logs:*'
                                 Resource: !Sub "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/codebuild/*"
                             -   Effect: Allow
-                                Action: 'ecr:*'
+                                Action: 
+                                    - 'ecr:PutImageScanningConfiguration'
+                                    - 'ecr:PutImage'
                                 Resource: 
                                     !Sub 
                                         - 'arn:aws:ecr:${AWS::Region}:${AWS::AccountId}:repository/${EcrName}*'
@@ -310,10 +313,13 @@ Resources:
                                         -  AWSrep
                                         - !Sub 'arn:aws:s3:::deploymentresources-${sourcebranch}${projectid}/msdeploy${sourcebranch}${projectid}/Codecommit/*'                                
                                         - !Sub 'arn:aws:s3:::deploymentresources-${sourcebranch}${projectid}/msdeploy${sourcebranch}${projectid}/GithubOutp/*'
+                            #separate statement for pulling global build image(from a potentially separate ECR)
                             -   Effect: Allow
                                 Action: 
                                     - 'ecr:GetAuthorizationToken'
                                     - 'ecr:BatchGetImage'
+                                    - 'ecr:BatchCheckLayerAvailability'
+                                    - 'ecr:GetDownloadUrlForLayer'
                                 Resource: '*'            
                             -   Effect: Allow
                                 Action: 
@@ -400,7 +406,6 @@ Resources:
                                     Action: 
                                         - 'codestar-connections:*'
                                         - 'codestar:*'
-                                        - 'codestar-connections:UseConnection'
                                     Resource: !Ref githubconnectionarn 
                             -   Effect: Allow
                                 Action: 
